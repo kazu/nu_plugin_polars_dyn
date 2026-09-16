@@ -136,3 +136,12 @@ fn unknown_opt_is_an_error() {
         "stderr:\n{stderr}"
     );
 }
+
+#[test]
+fn url_with_a_scheme_is_passed_through_untouched() {
+    let stderr = fail_nu("polars_dyn open ssh://u@h/data.xyz");
+    assert!(
+        stderr.contains("No scan source for `ssh://u@h/data.xyz`"),
+        "stderr:\n{stderr}"
+    );
+}

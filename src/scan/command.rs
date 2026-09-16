@@ -92,7 +92,7 @@ fn command(
     let format: Option<Spanned<String>> = call.get_flag("format")?;
     let opts: Option<Value> = call.get_flag("opts")?;
 
-    let source = Resource::new(plugin, engine, &spanned_source)?.as_string();
+    let source = resolve_source(plugin, engine, &spanned_source)?;
     let scan_source = match &format {
         Some(name) => plugin
             .scan_registry
@@ -124,6 +124,31 @@ fn command(
     let metadata = PipelineMetadata::default()
         .with_data_source(DataSource::FilePath(spanned_source.item.into()));
     Ok(PipelineData::value(value, Some(metadata)))
+}
+
+/// The source string a [`ScanSource`](super::ScanSource) receives. A URL with any scheme
+/// (`s3://`, `ssh://`, ...) is passed through untouched; everything else is a local path made
+/// absolute against the engine's current directory. The scheme is checked here rather than by
+/// `Resource`, whose `PlRefPath::has_scheme` knows only the cloud schemes polars reads itself.
+fn resolve_source(
+    plugin: &PolarsPlugin,
+    engine: &EngineInterface,
+    spanned_source: &Spanned<String>,
+) -> Result<String, ShellError> {
+    if has_url_scheme(&spanned_source.item) {
+        return Ok(spanned_source.item.clone());
+    }
+    Ok(Resource::new(plugin, engine, spanned_source)?.as_string())
+}
+
+/// `<scheme>://` per RFC 3986: a letter, then letters, digits, `+`, `-` or `.`.
+fn has_url_scheme(source: &str) -> bool {
+    let Some((scheme, _)) = source.split_once("://") else {
+        return false;
+    };
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
 }
 
 fn no_source_error(plugin: &PolarsPlugin, what: &str, span: Span) -> ShellError {
