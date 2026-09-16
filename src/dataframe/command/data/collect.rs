@@ -88,7 +88,7 @@ impl PluginCommand for LazyCollect {
                 // This should just increment the cache value.
                 // We can return a value back without incrementing the
                 // cache value or the value will be dropped (issue #12828)
-                let cv = plugin.cache.get(&df.id, true)?.ok_or_else(|| {
+                let cv = plugin.cache.get(&df.id)?.ok_or_else(|| {
                     ShellError::Generic(GenericError::new(
                         format!("Failed to get cached value {}", df.id),
                         "",

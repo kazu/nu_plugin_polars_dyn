@@ -2,6 +2,7 @@
 use std::{
     cmp::Ordering,
     panic::{AssertUnwindSafe, catch_unwind},
+    sync::OnceLock,
 };
 
 use cache::cache_commands;
@@ -12,7 +13,6 @@ use command::{
     datetime::datetime_commands, index::index_commands, integer::integer_commands,
     list::list_commands, selector::selector_commands, string::string_commands, stub::PolarsCmd,
 };
-use log::debug;
 use nu_plugin::{EngineInterface, Plugin, PluginCommand};
 
 mod cache;
@@ -31,7 +31,6 @@ use crate::values::PolarsPluginCustomValue;
 pub trait EngineWrapper {
     fn get_env_var(&self, key: &str) -> Option<String>;
     fn use_color(&self) -> bool;
-    fn set_gc_disabled(&self, disabled: bool) -> Result<(), ShellError>;
 }
 
 impl EngineWrapper for &EngineInterface {
@@ -52,17 +51,11 @@ impl EngineWrapper for &EngineInterface {
             .unwrap_or(Value::bool(false, Span::unknown()))
             .is_true()
     }
-
-    fn set_gc_disabled(&self, disabled: bool) -> Result<(), ShellError> {
-        debug!("set_gc_disabled called with {disabled}");
-        EngineInterface::set_gc_disabled(self, disabled)
-    }
 }
 
 pub struct PolarsPlugin {
     pub(crate) cache: Cache,
-    /// For testing purposes only
-    pub(crate) disable_cache_drop: bool,
+    gc_disabled: OnceLock<()>,
     pub(crate) runtime: Runtime,
 }
 
@@ -70,7 +63,7 @@ impl PolarsPlugin {
     pub fn new() -> Result<Self, ShellError> {
         Ok(Self {
             cache: Cache::default(),
-            disable_cache_drop: false,
+            gc_disabled: OnceLock::new(),
             runtime: Runtime::new().map_err(|e| {
                 ShellError::Generic(GenericError::new_internal(
                     format!("Could not instantiate tokio: {e}"),
@@ -78,6 +71,18 @@ impl PolarsPlugin {
                 ))
             })?,
         })
+    }
+
+    /// Turns the plugin GC off the first time the plugin holds an engine. Cached values live
+    /// until `polars store-rm` or the end of the plugin process, so the engine must not stop
+    /// the plugin while any value is cached.
+    pub(crate) fn disable_gc_once(&self, engine: &EngineInterface) -> Result<(), ShellError> {
+        if self.gc_disabled.get().is_some() {
+            return Ok(());
+        }
+        engine.set_gc_disabled(true)?;
+        let _ = self.gc_disabled.set(());
+        Ok(())
     }
 }
 
@@ -103,19 +108,6 @@ impl Plugin for PolarsPlugin {
 
         commands.append(&mut cache_commands());
         commands
-    }
-
-    fn custom_value_dropped(
-        &self,
-        engine: &EngineInterface,
-        custom_value: Box<dyn CustomValue>,
-    ) -> Result<(), LabeledError> {
-        debug!("custom_value_dropped called {custom_value:?}");
-        if !self.disable_cache_drop {
-            let id = CustomValueType::try_from_custom_value(custom_value, Span::unknown())?.id();
-            let _ = self.cache.remove(engine, &id, false);
-        }
-        Ok(())
     }
 
     fn custom_value_to_base_value(
@@ -308,26 +300,7 @@ pub mod test {
     impl PolarsPlugin {
         /// Creates a new polars plugin in test mode
         pub fn new_test_mode() -> Result<Self, ShellError> {
-            Ok(PolarsPlugin {
-                disable_cache_drop: true,
-                ..PolarsPlugin::new()?
-            })
-        }
-    }
-
-    struct TestEngineWrapper;
-
-    impl EngineWrapper for TestEngineWrapper {
-        fn get_env_var(&self, key: &str) -> Option<String> {
-            std::env::var(key).ok()
-        }
-
-        fn use_color(&self) -> bool {
-            false
-        }
-
-        fn set_gc_disabled(&self, _disabled: bool) -> Result<(), ShellError> {
-            Ok(())
+            PolarsPlugin::new()
         }
     }
 
@@ -348,10 +321,7 @@ pub mod test {
                 // if it's a polars plugin object, try to cache it
                 if let Ok(obj) = PolarsPluginObject::try_from_value(&plugin, result) {
                     let id = obj.id();
-                    plugin
-                        .cache
-                        .insert(TestEngineWrapper {}, id, obj, Span::test_data())
-                        .unwrap();
+                    plugin.cache.insert(id, obj, Span::test_data()).unwrap();
                 }
             }
         }

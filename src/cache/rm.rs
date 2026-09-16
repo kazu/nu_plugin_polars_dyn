@@ -40,30 +40,25 @@ impl PluginCommand for CacheRemove {
     fn run(
         &self,
         plugin: &Self::Plugin,
-        engine: &EngineInterface,
+        _engine: &EngineInterface,
         call: &EvaluatedCall,
         _input: PipelineData,
     ) -> Result<PipelineData, LabeledError> {
         let msgs: Vec<Value> = call
             .rest::<String>(0)?
             .into_iter()
-            .map(|ref key| remove_cache_entry(plugin, engine, key, call.head))
+            .map(|ref key| remove_cache_entry(plugin, key, call.head))
             .collect::<Result<Vec<Value>, ShellError>>()?;
 
         Ok(PipelineData::value(Value::list(msgs, call.head), None))
     }
 }
 
-fn remove_cache_entry(
-    plugin: &PolarsPlugin,
-    engine: &EngineInterface,
-    key: &str,
-    span: Span,
-) -> Result<Value, ShellError> {
+fn remove_cache_entry(plugin: &PolarsPlugin, key: &str, span: Span) -> Result<Value, ShellError> {
     let key = as_uuid(key, span)?;
     let msg = plugin
         .cache
-        .remove(engine, &key, true)?
+        .remove(&key)?
         .map(|_| format!("Removed: {key}"))
         .unwrap_or_else(|| format!("No value found for key: {key}"));
     Ok(Value::string(msg, span))
