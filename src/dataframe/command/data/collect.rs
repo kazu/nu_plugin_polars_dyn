@@ -9,6 +9,7 @@ use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{
     Category, Example, LabeledError, PipelineData, ShellError, Signature, Span, Value,
 };
+use polars::prelude::Engine;
 
 #[derive(Clone)]
 pub struct LazyCollect;
@@ -36,6 +37,11 @@ impl PluginCommand for LazyCollect {
                     PolarsPluginType::NuDataFrame.into(),
                 ),
             ])
+            .switch(
+                "streaming",
+                "Collect on the polars streaming engine instead of the in-memory engine.",
+                None,
+            )
             .category(Category::Custom("lazyframe".into()))
     }
 
@@ -74,7 +80,11 @@ impl PluginCommand for LazyCollect {
         let value = input.into_value(call.head)?;
         match PolarsPluginObject::try_from_value(plugin, &value)? {
             PolarsPluginObject::NuLazyFrame(lazy) => {
-                let mut eager = lazy.collect(call.head)?;
+                let mut eager = if call.has_flag("streaming")? {
+                    lazy.collect_with_engine(Engine::Streaming, call.head)?
+                } else {
+                    lazy.collect(call.head)?
+                };
                 // We don't want this converted back to a lazy frame
                 eager.from_lazy = true;
                 Ok(PipelineData::value(

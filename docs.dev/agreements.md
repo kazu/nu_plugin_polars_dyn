@@ -127,6 +127,22 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 - eager / lazy の制御は現状維持。明示の切り替え(`collect` / `into-lazy` / `into-df`)と、
   入力の種類が出力に引き継がれる規則(`from_eager` / `from_lazy` の flag と
   `cache_and_to_value` の判定)はそのまま残す。
+- 例外は 1 つ: `polars_dyn collect --streaming` で polars の streaming エンジン
+  (`Engine::Streaming`、`polars-stream`)を明示的に選べる。デフォルトは in-memory のままで、
+  暗黙の collect(`into-nu` に lazy を渡す、`shape`、`summary` 等)は触らない。
+  `Cargo.toml` の polars に feature `streaming` を足すので、環境変数 `POLARS_FORCE_STREAMING=1`
+  も併存して効く。採らなかった案: デフォルトを streaming にする(未対応ノードがエラーになる)、
+  全コマンドに flag を撒く(先に `collect --streaming` を挟めば足りる)、環境変数だけに頼る
+  (プロセス全体に効いて暗黙の collect も巻き込む)。
+  `AnonymousScan` で書かれた source(logfmt、将来の seekzstdsep)は streaming で collect
+  **できない**。polars-stream 0.55.2 は `FileScanIR::Anonymous` を `todo!("unimplemented:
+  AnonymousScan")` で落とす(0.52 から変わっていない)。plugin はその panic を捕まえて
+  「`collecting on the streaming engine: not yet implemented: unimplemented: AnonymousScan`」の
+  エラーとして返し、in-memory へ黙って fallback しない(polars 自身は `POLARS_AUTO_STREAMING=1`
+  のときだけ fallback する)。文言は `tests/collect_streaming.rs` で固定。
+  `streaming` feature を入れると in-memory エンジンも file scan だけは polars-stream に委ねるので、
+  `POLARS_VERBOSE=1` の `polars-stream:` 行は両エンジンで出る。エンジンの区別は in-memory だけの
+  `run sink_mem` と streaming だけの `running streaming-slice in subgraph` で見る。
 
 ## `Cargo.toml` の独立と polars 版
 

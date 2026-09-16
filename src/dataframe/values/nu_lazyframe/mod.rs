@@ -9,7 +9,8 @@ use super::{
 use core::fmt;
 use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{PipelineData, ShellError, Span, Value, record};
-use polars::prelude::{Expr, IntoLazy, LazyFrame};
+use polars::prelude::{DataFrame, Engine, Expr, IntoLazy, LazyFrame};
+use polars_core::query_result::QueryResult;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -56,10 +57,20 @@ impl NuLazyFrame {
     }
 
     pub fn collect(self, span: Span) -> Result<NuDataFrame, ShellError> {
-        crate::handle_panic(
+        self.collect_with_engine(Engine::Auto, span)
+    }
+
+    /// Collects the frame on the given polars engine. `Engine::Auto` is what
+    /// `LazyFrame::collect` uses: in-memory unless `POLARS_FORCE_STREAMING=1`.
+    pub fn collect_with_engine(
+        self,
+        engine: Engine,
+        span: Span,
+    ) -> Result<NuDataFrame, ShellError> {
+        crate::handle_panic_with_message(
             || {
                 self.to_polars()
-                    .collect()
+                    .collect_with_engine(engine)
                     .map_err(|e| {
                         ShellError::Generic(GenericError::new(
                             "Error collecting lazy frame",
@@ -67,8 +78,13 @@ impl NuLazyFrame {
                             span,
                         ))
                     })
+                    .map(|r| match r {
+                        QueryResult::Single(df) => df,
+                        QueryResult::Multiple(_) => DataFrame::empty(),
+                    })
                     .map(|df| NuDataFrame::new(true, df))
             },
+            &format!("collecting on the {engine} engine"),
             span,
         )
     }
