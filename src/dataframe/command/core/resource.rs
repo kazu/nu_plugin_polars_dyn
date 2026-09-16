@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{PolarsPlugin, cloud::build_cloud_options};
+use crate::PolarsPlugin;
 use nu_path::expand_path_with;
 use nu_plugin::EngineInterface;
 use nu_protocol::{ShellError, Span, Spanned, shell_error::generic::GenericError};
@@ -29,22 +29,18 @@ impl std::fmt::Debug for Resource {
 }
 
 impl Resource {
+    /// Resolves a path or cloud URL. A relative path is made absolute against the engine's
+    /// current directory. A URL with a scheme is passed to polars as is, with the default
+    /// [`CloudOptions`]: polars then reads the credentials from the environment.
     pub(crate) fn new(
-        plugin: &PolarsPlugin,
+        _plugin: &PolarsPlugin,
         engine: &EngineInterface,
         spanned_path: &Spanned<String>,
     ) -> Result<Self, ShellError> {
         let path = PlRefPath::from(spanned_path.item.as_str());
 
         let (path, cloud_options): (PlRefPath, Option<CloudOptions>) = if path.has_scheme() {
-            let options = build_cloud_options(plugin, &path)?;
-            if options.is_none() {
-                return Err(ShellError::Generic(GenericError::new_internal(
-                    format!("Could not determine a supported cloud type from path: {path}"),
-                    "",
-                )));
-            }
-            (path, options)
+            (path, Some(CloudOptions::default()))
         } else {
             let new_path = expand_path_with(&spanned_path.item, engine.get_current_dir()?, true);
             (

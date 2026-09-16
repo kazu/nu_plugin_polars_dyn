@@ -16,14 +16,12 @@ use command::{
 use nu_plugin::{EngineInterface, Plugin, PluginCommand};
 
 mod cache;
-mod cloud;
 pub mod dataframe;
 pub use dataframe::*;
 use nu_protocol::{
     CustomValue, LabeledError, ShellError, Span, Spanned, Value, ast::Operator, casing::Casing,
     shell_error::generic::GenericError,
 };
-use tokio::runtime::Runtime;
 use values::CustomValueType;
 
 use crate::values::PolarsPluginCustomValue;
@@ -56,7 +54,6 @@ impl EngineWrapper for &EngineInterface {
 pub struct PolarsPlugin {
     pub(crate) cache: Cache,
     gc_disabled: OnceLock<()>,
-    pub(crate) runtime: Runtime,
 }
 
 impl PolarsPlugin {
@@ -64,12 +61,6 @@ impl PolarsPlugin {
         Ok(Self {
             cache: Cache::default(),
             gc_disabled: OnceLock::new(),
-            runtime: Runtime::new().map_err(|e| {
-                ShellError::Generic(GenericError::new_internal(
-                    format!("Could not instantiate tokio: {e}"),
-                    "",
-                ))
-            })?,
         })
     }
 
