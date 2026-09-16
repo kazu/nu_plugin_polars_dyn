@@ -25,7 +25,7 @@ impl PluginCommand for ExprDatePart {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars datepart"
+        "polars_dyn datepart"
     }
 
     fn description(&self) -> &str {
@@ -61,7 +61,7 @@ impl PluginCommand for ExprDatePart {
         vec![
             Example {
                 description: "Creates an expression to capture the year date part",
-                example: r#"[["2021-12-30T01:02:03.123456789"]] | polars into-df | polars as-datetime "%Y-%m-%dT%H:%M:%S.%9f" --naive | polars with-column [(polars col datetime | polars datepart year | polars as datetime_year )]"#,
+                example: r#"[["2021-12-30T01:02:03.123456789"]] | polars_dyn into-df | polars_dyn as-datetime "%Y-%m-%dT%H:%M:%S.%9f" --naive | polars_dyn with-column [(polars_dyn col datetime | polars_dyn datepart year | polars_dyn as datetime_year )]"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -83,14 +83,14 @@ impl PluginCommand for ExprDatePart {
             },
             Example {
                 description: "Creates an expression to capture multiple date parts",
-                example: r#"[["2021-12-30T01:02:03.123456789"]] | polars into-df | polars as-datetime "%Y-%m-%dT%H:%M:%S.%9f" --naive |
-                polars with-column [ (polars col datetime | polars datepart year | polars as datetime_year ),
-                (polars col datetime | polars datepart month | polars as datetime_month ),
-                (polars col datetime | polars datepart day | polars as datetime_day ),
-                (polars col datetime | polars datepart hour | polars as datetime_hour ),
-                (polars col datetime | polars datepart minute | polars as datetime_minute ),
-                (polars col datetime | polars datepart second | polars as datetime_second ),
-                (polars col datetime | polars datepart nanosecond | polars as datetime_ns ) ]"#,
+                example: r#"[["2021-12-30T01:02:03.123456789"]] | polars_dyn into-df | polars_dyn as-datetime "%Y-%m-%dT%H:%M:%S.%9f" --naive |
+                polars_dyn with-column [ (polars_dyn col datetime | polars_dyn datepart year | polars_dyn as datetime_year ),
+                (polars_dyn col datetime | polars_dyn datepart month | polars_dyn as datetime_month ),
+                (polars_dyn col datetime | polars_dyn datepart day | polars_dyn as datetime_day ),
+                (polars_dyn col datetime | polars_dyn datepart hour | polars_dyn as datetime_hour ),
+                (polars_dyn col datetime | polars_dyn datepart minute | polars_dyn as datetime_minute ),
+                (polars_dyn col datetime | polars_dyn datepart second | polars_dyn as datetime_second ),
+                (polars_dyn col datetime | polars_dyn datepart nanosecond | polars_dyn as datetime_ns ) ]"#,
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![

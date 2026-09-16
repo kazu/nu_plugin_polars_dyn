@@ -23,7 +23,7 @@ impl PluginCommand for QueryDf {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars query"
+        "polars_dyn query"
     }
 
     fn description(&self) -> &str {
@@ -53,7 +53,7 @@ impl PluginCommand for QueryDf {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Query dataframe using SQL",
-            example: "[[a b]; [1 2] [3 4]] | polars into-df | polars query 'select a from df'",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn query 'select a from df'",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

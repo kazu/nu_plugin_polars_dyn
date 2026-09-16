@@ -14,7 +14,7 @@ impl PluginCommand for ExprAlias {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars as"
+        "polars_dyn as"
     }
 
     fn description(&self) -> &str {
@@ -44,7 +44,7 @@ impl PluginCommand for ExprAlias {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Creates and alias expression",
-            example: "polars col a | polars as new_a | polars into-nu",
+            example: "polars_dyn col a | polars_dyn as new_a | polars_dyn into-nu",
             result: {
                 let record = Value::test_record(record! {
                     "expr" =>  Value::test_record(record! {

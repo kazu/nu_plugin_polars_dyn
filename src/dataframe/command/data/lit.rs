@@ -15,7 +15,7 @@ impl PluginCommand for ExprLit {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars lit"
+        "polars_dyn lit"
     }
 
     fn description(&self) -> &str {
@@ -37,7 +37,7 @@ impl PluginCommand for ExprLit {
         vec![
             Example {
                 description: "Created a literal expression and converts it to a nu object",
-                example: "polars lit 2 | polars into-nu",
+                example: "polars_dyn lit 2 | polars_dyn into-nu",
                 result: Some(Value::test_record(record! {
                     "expr" =>  Value::test_string("literal"),
                     "value" => Value::test_string("dyn int: 2"),
@@ -45,7 +45,7 @@ impl PluginCommand for ExprLit {
             },
             Example {
                 description: "Create a literal expression from date",
-                example: "polars lit 2025-04-13 | polars into-nu",
+                example: "polars_dyn lit 2025-04-13 | polars_dyn into-nu",
                 result: Some(Value::test_record(record! {
                     "expr" => Value::test_record(record! {
                         "expr" =>  Value::test_string("literal"),
@@ -57,7 +57,7 @@ impl PluginCommand for ExprLit {
             },
             Example {
                 description: "Create a literal expression from duration",
-                example: "polars lit 3hr | polars into-nu",
+                example: "polars_dyn lit 3hr | polars_dyn into-nu",
                 result: Some(Value::test_record(record! {
                     "expr" => Value::test_record(record! {
                         "expr" =>  Value::test_string("literal"),

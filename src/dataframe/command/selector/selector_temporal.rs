@@ -14,7 +14,7 @@ impl PluginCommand for SelectorTemporal {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector temporal"
+        "polars_dyn selector temporal"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorTemporal {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector temporal",
+            example: "polars_dyn selector temporal",
             description: "Create a selector for temporal columns (date, datetime, duration, time)",
             result: None,
         }]

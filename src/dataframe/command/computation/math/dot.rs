@@ -18,7 +18,7 @@ impl PluginCommand for ExprMathDot {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math dot"
+        "polars_dyn math dot"
     }
 
     fn description(&self) -> &str {
@@ -49,9 +49,9 @@ impl PluginCommand for ExprMathDot {
         vec![Example {
             description: "Compute the dot product of two integer columns",
             example: "[[a b]; [0 0] [1 1] [2 2] [3 3] [4 4] [5 5]] | 
-    polars into-df | 
-    polars select (polars col a | polars math dot (polars col b) | polars as ab) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math dot (polars_dyn col b) | polars_dyn as ab) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("ab" => [55.0f64]).expect("simple df for test should not fail"),

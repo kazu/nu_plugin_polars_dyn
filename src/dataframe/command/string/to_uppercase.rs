@@ -21,7 +21,7 @@ impl PluginCommand for ToUpperCase {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars uppercase"
+        "polars_dyn uppercase"
     }
 
     fn description(&self) -> &str {
@@ -59,7 +59,7 @@ impl PluginCommand for ToUpperCase {
         vec![
             Example {
                 description: "Modifies strings in a column to uppercase",
-                example: "[[a]; [Abc]] | polars into-df | polars select (polars col a | polars uppercase) | polars collect",
+                example: "[[a]; [Abc]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn uppercase) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -75,7 +75,7 @@ impl PluginCommand for ToUpperCase {
             },
             Example {
                 description: "Modifies strings to uppercase",
-                example: "[Abc aBc abC] | polars into-df | polars uppercase",
+                example: "[Abc aBc abC] | polars_dyn into-df | polars_dyn uppercase",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

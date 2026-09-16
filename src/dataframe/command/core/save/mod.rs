@@ -28,7 +28,7 @@ impl PluginCommand for SaveDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars save"
+        "polars_dyn save"
     }
 
     fn description(&self) -> &str {
@@ -73,37 +73,37 @@ impl PluginCommand for SaveDF {
         vec![
             Example {
                 description: "Performs a streaming collect and save the output to the specified file",
-                example: "[[a b];[1 2] [3 4]] | polars into-lazy | polars save test.parquet",
+                example: "[[a b];[1 2] [3 4]] | polars_dyn into-lazy | polars_dyn save test.parquet",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to parquet file",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.parquet",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.parquet",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to arrow file",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.arrow",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.arrow",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to NDJSON file",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.ndjson",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.ndjson",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to avro file",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.avro",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.avro",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to CSV file",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.csv",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.csv",
                 result: None,
             },
             Example {
                 description: "Saves dataframe to CSV file using other delimiter",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars save test.csv --csv-delimiter '|'",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save test.csv --csv-delimiter '|'",
                 result: None,
             },
         ]
@@ -293,7 +293,7 @@ pub(crate) mod test {
 
     fn tmp_dir_sandbox() -> Result<(TempDir, PluginTest), Box<dyn std::error::Error>> {
         let tmp_dir = tempfile::tempdir()?;
-        let mut plugin_test = PluginTest::new("polars", PolarsPlugin::new()?.into())?;
+        let mut plugin_test = PluginTest::new("polars", PolarsPlugin::new_test_mode()?.into())?;
         plugin_test.engine_state_mut().add_env_var(
             "PWD".to_string(),
             Value::string(
@@ -325,14 +325,14 @@ pub(crate) mod test {
 
     pub fn test_lazy_save(extension: &str) -> Result<(), Box<dyn std::error::Error>> {
         test_save(
-            "[[a b]; [1 2] [3 4]] | polars into-lazy | polars save",
+            "[[a b]; [1 2] [3 4]] | polars_dyn into-lazy | polars_dyn save",
             extension,
         )
     }
 
     pub fn test_eager_save(extension: &str) -> Result<(), Box<dyn std::error::Error>> {
         test_save(
-            "[[a b]; [1 2] [3 4]] | polars into-df | polars save",
+            "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn save",
             extension,
         )
     }
@@ -346,11 +346,11 @@ pub(crate) mod test {
         let tmp_file_str = tmp_file.to_str().expect("Should be able to get file path");
 
         let _setup = plugin_test.eval(&format!(
-            "[1 2 3] | polars into-df | polars save {tmp_file_str}",
+            "[1 2 3] | polars_dyn into-df | polars_dyn save {tmp_file_str}",
         ))?;
 
         let output = plugin_test.eval(&format!(
-            "polars open {tmp_file_str} | polars save {tmp_file_str}"
+            "polars_dyn open {tmp_file_str} | polars_dyn save {tmp_file_str}"
         ));
 
         assert!(output.is_err_and(|e| {

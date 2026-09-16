@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathCos {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math cos"
+        "polars_dyn math cos"
     }
 
     fn description(&self) -> &str {
@@ -40,9 +40,9 @@ impl PluginCommand for ExprMathCos {
         vec![Example {
             description: "Compute the element-wise cosine of a float column",
             example: "[[a]; [0.0] [3.141592653589793]] | 
-    polars into-df | 
-    polars select (polars col a | polars math cos) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math cos) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a" => [1.0f64, -1.0f64]).expect("simple df for test should not fail"),

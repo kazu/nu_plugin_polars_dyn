@@ -23,7 +23,7 @@ impl PluginCommand for ToDataFrame {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars into-df"
+        "polars_dyn into-df"
     }
 
     fn description(&self) -> &str {
@@ -51,7 +51,7 @@ impl PluginCommand for ToDataFrame {
         vec![
             Example {
                 description: "Takes a dictionary and creates a dataframe",
-                example: "[[a b];[1 2] [3 4]] | polars into-df",
+                example: "[[a b];[1 2] [3 4]] | polars_dyn into-df",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -73,7 +73,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Takes a record of lists and creates a dataframe",
-                example: "{a: [1 3], b: [2 4]} | polars into-df --as-columns",
+                example: "{a: [1 3], b: [2 4]} | polars_dyn into-df --as-columns",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -95,7 +95,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Takes a list of tables and creates a dataframe",
-                example: "[[1 2 a] [3 4 b] [5 6 c]] | polars into-df",
+                example: "[[1 2 a] [3 4 b] [5 6 c]] | polars_dyn into-df",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -125,7 +125,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Takes a list and creates a dataframe",
-                example: "[a b c] | polars into-df",
+                example: "[a b c] | polars_dyn into-df",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -145,7 +145,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Takes a list of booleans and creates a dataframe",
-                example: "[true true false] | polars into-df",
+                example: "[true true false] | polars_dyn into-df",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -165,7 +165,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Convert to a dataframe and provide a schema",
-                example: "[[a b c e]; [1 {d: [1 2 3]} [10 11 12] 1.618]]| polars into-df -s {a: u8, b: {d: list<u64>}, c: list<u8>, e: 'decimal<4,3>'}",
+                example: "[[a b c e]; [1 {d: [1 2 3]} [10 11 12] 1.618]]| polars_dyn into-df -s {a: u8, b: {d: list<u64>}, c: list<u8>, e: 'decimal<4,3>'}",
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![
@@ -205,7 +205,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Convert to a dataframe and provide a schema that adds a new column",
-                example: r#"[[a b]; [1 "foo"] [2 "bar"]] | polars into-df -s {a: u8, b:str, c:i64} | polars fill-null 3"#,
+                example: r#"[[a b]; [1 "foo"] [2 "bar"]] | polars_dyn into-df -s {a: u8, b:str, c:i64} | polars_dyn fill-null 3"#,
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![
@@ -221,7 +221,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "If a provided schema specifies a subset of columns, only those columns are selected",
-                example: r#"[[a b]; [1 "foo"] [2 "bar"]] | polars into-df -s {a: str}"#,
+                example: r#"[[a b]; [1 "foo"] [2 "bar"]] | polars_dyn into-df -s {a: str}"#,
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![Series::new("a".into(), ["1", "2"])],
@@ -233,7 +233,7 @@ impl PluginCommand for ToDataFrame {
             },
             Example {
                 description: "Use a predefined schama",
-                example: r#"let schema = {a: str, b: str}; [[a b]; [1 "foo"] [2 "bar"]] | polars into-df -s $schema"#,
+                example: r#"let schema = {a: str, b: str}; [[a b]; [1 "foo"] [2 "bar"]] | polars_dyn into-df -s $schema"#,
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![

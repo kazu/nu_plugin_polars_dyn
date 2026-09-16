@@ -10,7 +10,7 @@ impl PluginCommand for MathCmd {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math"
+        "polars_dyn math"
     }
 
     fn description(&self) -> &str {
@@ -26,7 +26,7 @@ See https://docs.pola.rs/api/python/stable/reference/expressions/computation.htm
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("polars math")
+        Signature::build("polars_dyn math")
             .category(Category::Custom("dataframe".into()))
             .input_output_types(vec![(Type::Nothing, Type::String)])
     }

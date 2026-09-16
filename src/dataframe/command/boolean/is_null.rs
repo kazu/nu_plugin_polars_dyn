@@ -19,7 +19,7 @@ impl PluginCommand for IsNull {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars is-null"
+        "polars_dyn is-null"
     }
 
     fn description(&self) -> &str {
@@ -53,9 +53,9 @@ impl PluginCommand for IsNull {
         vec![
             Example {
                 description: "Create mask where values are null",
-                example: r#"let s = ([5 6 0 8] | polars into-df);
+                example: r#"let s = ([5 6 0 8] | polars_dyn into-df);
     let res = ($s / $s);
-    $res | polars is-null"#,
+    $res | polars_dyn is-null"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -76,7 +76,7 @@ impl PluginCommand for IsNull {
             },
             Example {
                 description: "Creates a is null expression from a column",
-                example: "polars col a | polars is-null",
+                example: "polars_dyn col a | polars_dyn is-null",
                 result: None,
             },
         ]

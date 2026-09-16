@@ -14,7 +14,7 @@ impl PluginCommand for SelectorEmpty {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector empty"
+        "polars_dyn selector empty"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorEmpty {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector empty",
+            example: "polars_dyn selector empty",
             description: "Create an empty selector that matches no columns",
             result: None,
         }]

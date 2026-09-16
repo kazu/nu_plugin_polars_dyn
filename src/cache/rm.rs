@@ -14,7 +14,7 @@ impl PluginCommand for CacheRemove {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars store-rm"
+        "polars_dyn store-rm"
     }
 
     fn description(&self) -> &str {
@@ -31,8 +31,8 @@ impl PluginCommand for CacheRemove {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Removes a stored ",
-            example: r#"let df = ([[a b];[1 2] [3 4]] | polars into-df);
-    polars store-ls | get key | first | polars store-rm $in"#,
+            example: r#"let df = ([[a b];[1 2] [3 4]] | polars_dyn into-df);
+    polars_dyn store-ls | get key | first | polars_dyn store-rm $in"#,
             result: None,
         }]
     }
@@ -88,7 +88,7 @@ mod test {
         let pipeline_data = PluginTest::new("polars", plugin)?
             .add_decl(Box::new(First))?
             .add_decl(Box::new(Get))?
-            .eval("let df = ([[a b];[1 2] [3 4]] | polars into-df); polars store-ls | get key | first | polars store-rm $in")?;
+            .eval("let df = ([[a b];[1 2] [3 4]] | polars_dyn into-df); polars_dyn store-ls | get key | first | polars_dyn store-rm $in")?;
         let value = pipeline_data.into_value(Span::test_data())?;
         let msg = value
             .as_list()?

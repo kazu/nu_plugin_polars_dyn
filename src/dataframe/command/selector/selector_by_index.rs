@@ -17,7 +17,7 @@ impl PluginCommand for SelectorByIndex {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector by-index"
+        "polars_dyn selector by-index"
     }
 
     fn description(&self) -> &str {
@@ -44,9 +44,9 @@ impl PluginCommand for SelectorByIndex {
         vec![
             Example {
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-    | polars into-df
-    | polars select (polars selector by-index 0 2)
-    | polars collect"#,
+    | polars_dyn into-df
+    | polars_dyn select (polars_dyn selector by-index 0 2)
+    | polars_dyn collect"#,
                 description: "Select first and third columns by index",
                 result: Some(
                     NuDataFrame::try_from_columns(
@@ -69,9 +69,9 @@ impl PluginCommand for SelectorByIndex {
             },
             Example {
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-    | polars into-df
-    | polars select (polars selector by-index -1)
-    | polars collect"#,
+    | polars_dyn into-df
+    | polars_dyn select (polars_dyn selector by-index -1)
+    | polars_dyn collect"#,
                 description: "Select the last column using a negative index",
                 result: Some(
                     NuDataFrame::try_from_columns(

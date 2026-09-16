@@ -14,7 +14,7 @@ impl PluginCommand for AllTrue {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars all-true"
+        "polars_dyn all-true"
     }
 
     fn description(&self) -> &str {
@@ -40,7 +40,7 @@ impl PluginCommand for AllTrue {
         vec![
             Example {
                 description: "Returns true if all values are true",
-                example: "[true true true] | polars into-df | polars all-true",
+                example: "[true true true] | polars_dyn into-df | polars_dyn all-true",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -56,9 +56,9 @@ impl PluginCommand for AllTrue {
             },
             Example {
                 description: "Checks the result from a comparison",
-                example: r#"let s = ([5 6 2 8] | polars into-df);
+                example: r#"let s = ([5 6 2 8] | polars_dyn into-df);
     let res = ($s > 9);
-    $res | polars all-true"#,
+    $res | polars_dyn all-true"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

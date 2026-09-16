@@ -25,7 +25,7 @@ impl PluginCommand for ReplaceTimeZone {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars replace-time-zone"
+        "polars_dyn replace-time-zone"
     }
 
     fn description(&self) -> &str {
@@ -72,9 +72,9 @@ impl PluginCommand for ReplaceTimeZone {
         vec![
             Example {
                 description: "Apply timezone to a naive datetime",
-                example: r#"["2021-12-30 00:00:00" "2021-12-31 00:00:00"] | polars into-df
-                    | polars as-datetime "%Y-%m-%d %H:%M:%S" --naive
-                    | polars select (polars col datetime | polars replace-time-zone "America/New_York")"#,
+                example: r#"["2021-12-30 00:00:00" "2021-12-31 00:00:00"] | polars_dyn into-df
+                    | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S" --naive
+                    | polars_dyn select (polars_dyn col datetime | polars_dyn replace-time-zone "America/New_York")"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -117,9 +117,9 @@ impl PluginCommand for ReplaceTimeZone {
             Example {
                 description: "Apply timezone with ambiguous datetime",
                 example: r#"["2025-11-02 00:00:00", "2025-11-02 01:00:00", "2025-11-02 02:00:00", "2025-11-02 03:00:00"]
-                    | polars into-df
-                    | polars as-datetime "%Y-%m-%d %H:%M:%S" --naive
-                    | polars select (polars col datetime | polars replace-time-zone "America/New_York" --ambiguous null)"#,
+                    | polars_dyn into-df
+                    | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S" --naive
+                    | polars_dyn select (polars_dyn col datetime | polars_dyn replace-time-zone "America/New_York" --ambiguous null)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -171,9 +171,9 @@ impl PluginCommand for ReplaceTimeZone {
             Example {
                 description: "Apply timezone with nonexistent datetime",
                 example: r#"["2025-03-09 01:00:00", "2025-03-09 02:00:00", "2025-03-09 03:00:00", "2025-03-09 04:00:00"]
-                    | polars into-df
-                    | polars as-datetime "%Y-%m-%d %H:%M:%S" --naive
-                    | polars select (polars col datetime | polars replace-time-zone "America/New_York" --nonexistent null)"#,
+                    | polars_dyn into-df
+                    | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S" --naive
+                    | polars_dyn select (polars_dyn col datetime | polars_dyn replace-time-zone "America/New_York" --nonexistent null)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

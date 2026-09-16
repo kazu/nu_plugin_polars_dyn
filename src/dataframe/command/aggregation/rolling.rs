@@ -50,7 +50,7 @@ impl PluginCommand for Rolling {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars rolling"
+        "polars_dyn rolling"
     }
 
     fn description(&self) -> &str {
@@ -78,7 +78,7 @@ impl PluginCommand for Rolling {
         vec![
             Example {
                 description: "Rolling sum for a series",
-                example: "[1 2 3 4 5] | polars into-df | polars rolling sum 2 | polars drop-nulls",
+                example: "[1 2 3 4 5] | polars_dyn into-df | polars_dyn rolling sum 2 | polars_dyn drop-nulls",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -99,7 +99,7 @@ impl PluginCommand for Rolling {
             },
             Example {
                 description: "Rolling max for a series",
-                example: "[1 2 3 4 5] | polars into-df | polars rolling max 2 | polars drop-nulls",
+                example: "[1 2 3 4 5] | polars_dyn into-df | polars_dyn rolling max 2 | polars_dyn drop-nulls",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

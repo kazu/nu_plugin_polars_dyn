@@ -21,7 +21,7 @@ impl PluginCommand for GetWeek {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get-week"
+        "polars_dyn get-week"
     }
 
     fn description(&self) -> &str {
@@ -56,8 +56,8 @@ impl PluginCommand for GetWeek {
             Example {
                 description: "Returns week from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars get-week"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn get-week"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[32i8, 32]),
@@ -70,8 +70,8 @@ impl PluginCommand for GetWeek {
             Example {
                 description: "Returns week from a date in an expression",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars select (polars col 0 | polars get-week)"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn col 0 | polars_dyn get-week)"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[32i8, 32]),

@@ -18,7 +18,7 @@ impl PluginCommand for ArgSort {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-sort"
+        "polars_dyn arg-sort"
     }
 
     fn description(&self) -> &str {
@@ -61,7 +61,7 @@ impl PluginCommand for ArgSort {
         vec![
             Example {
                 description: "Returns indexes for a sorted series",
-                example: "[1 2 2 3 3] | polars into-df | polars arg-sort",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn arg-sort",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -83,7 +83,7 @@ impl PluginCommand for ArgSort {
             },
             Example {
                 description: "Returns indexes for a sorted series",
-                example: "[1 2 2 3 3] | polars into-df | polars arg-sort --reverse",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn arg-sort --reverse",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -105,7 +105,7 @@ impl PluginCommand for ArgSort {
             },
             Example {
                 description: "Returns indexes for a sorted series and applying a limit",
-                example: "[1 2 2 3 3] | polars into-df | polars arg-sort --limit 2",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn arg-sort --limit 2",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

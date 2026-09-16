@@ -14,7 +14,7 @@ impl PluginCommand for NNull {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars count-null"
+        "polars_dyn count-null"
     }
 
     fn description(&self) -> &str {
@@ -39,8 +39,8 @@ impl PluginCommand for NNull {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Counts null values",
-            example: r#"let s = ([1 1 0 0 3 3 4] | polars into-df);
-    ($s / $s) | polars count-null"#,
+            example: r#"let s = ([1 1 0 0 3 3 4] | polars_dyn into-df);
+    ($s / $s) | polars_dyn count-null"#,
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

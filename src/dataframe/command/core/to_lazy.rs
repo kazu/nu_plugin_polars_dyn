@@ -17,7 +17,7 @@ impl PluginCommand for ToLazyFrame {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars into-lazy"
+        "polars_dyn into-lazy"
     }
 
     fn description(&self) -> &str {
@@ -40,19 +40,19 @@ impl PluginCommand for ToLazyFrame {
         vec![
             Example {
                 description: "Takes a table and creates a lazyframe",
-                example: "[[a b];[1 2] [3 4]] | polars into-lazy",
+                example: "[[a b];[1 2] [3 4]] | polars_dyn into-lazy",
                 result: None,
             },
             Example {
                 description: "Takes a table, creates a lazyframe, assigns column 'b' type str, displays the schema",
-                example: "[[a b];[1 2] [3 4]] | polars into-lazy --schema {b: str} | polars schema",
+                example: "[[a b];[1 2] [3 4]] | polars_dyn into-lazy --schema {b: str} | polars_dyn schema",
                 result: Some(Value::test_record(
                     record! {"b" => Value::test_string("str")},
                 )),
             },
             Example {
                 description: "Use a predefined schama",
-                example: r#"let schema = {a: str, b: str}; [[a b]; [1 "foo"] [2 "bar"]] | polars into-lazy -s $schema"#,
+                example: r#"let schema = {a: str, b: str}; [[a b]; [1 "foo"] [2 "bar"]] | polars_dyn into-lazy -s $schema"#,
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![
@@ -107,7 +107,8 @@ mod tests {
     fn test_to_lazy() -> Result<(), ShellError> {
         let plugin: Arc<PolarsPlugin> = PolarsPlugin::new_test_mode()?.into();
         let mut plugin_test = PluginTest::new("polars", Arc::clone(&plugin))?;
-        let pipeline_data = plugin_test.eval("[[a b]; [6 2] [1 4] [4 1]] | polars into-lazy")?;
+        let pipeline_data =
+            plugin_test.eval("[[a b]; [6 2] [1 4] [4 1]] | polars_dyn into-lazy")?;
         let value = pipeline_data.into_value(Span::test_data())?;
         let df = NuLazyFrame::try_from_value(&plugin, &value)?;
         assert!(!df.from_eager);

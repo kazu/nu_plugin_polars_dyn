@@ -12,7 +12,7 @@ impl PluginCommand for ToSchema {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars into-schema"
+        "polars_dyn into-schema"
     }
 
     fn description(&self) -> &str {
@@ -28,7 +28,7 @@ impl PluginCommand for ToSchema {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Convert a record into a schema and back to a nu object",
-            example: r#"{a: str, b: u8} | polars into-schema | polars into-nu"#,
+            example: r#"{a: str, b: u8} | polars_dyn into-schema | polars_dyn into-nu"#,
             result: Some(Value::record(
                 record! {
                     "a" => Value::string("str", Span::test_data()),

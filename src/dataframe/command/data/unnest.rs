@@ -19,7 +19,7 @@ impl PluginCommand for UnnestDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars unnest"
+        "polars_dyn unnest"
     }
 
     fn description(&self) -> &str {
@@ -53,10 +53,10 @@ impl PluginCommand for UnnestDF {
             Example {
                 description: "Unnest a dataframe",
                 example: r#"[[id person]; [1 {name: "Bob", age: 36}] [2 {name: "Betty", age: 63}]] 
-                    | polars into-df -s {id: i64, person: {name: str, age: u8}} 
-                    | polars unnest person
-                    | polars get id name age
-                    | polars sort-by id"#,
+                    | polars_dyn into-df -s {id: i64, person: {name: str, age: u8}} 
+                    | polars_dyn unnest person
+                    | polars_dyn get id name age
+                    | polars_dyn sort-by id"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(
@@ -72,12 +72,12 @@ impl PluginCommand for UnnestDF {
             Example {
                 description: "Unnest a lazy dataframe",
                 example: r#"[[id person]; [1 {name: "Bob", age: 36}] [2 {name: "Betty", age: 63}]] 
-                    | polars into-df -s {id: i64, person: {name: str, age: u8}} 
-                    | polars into-lazy 
-                    | polars unnest person
-                    | polars select (polars col id) (polars col name) (polars col age)
-                    | polars collect
-                    | polars sort-by id"#,
+                    | polars_dyn into-df -s {id: i64, person: {name: str, age: u8}} 
+                    | polars_dyn into-lazy 
+                    | polars_dyn unnest person
+                    | polars_dyn select (polars_dyn col id) (polars_dyn col name) (polars_dyn col age)
+                    | polars_dyn collect
+                    | polars_dyn sort-by id"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(
@@ -93,10 +93,10 @@ impl PluginCommand for UnnestDF {
             Example {
                 description: "Unnest with a custom separator",
                 example: r#"[[id person]; [1 {name: "Bob", age: 36}] [2 {name: "Betty", age: 63}]] 
-                    | polars into-df -s {id: i64, person: {name: str, age: u8}} 
-                    | polars unnest person -s "_"
-                    | polars get id person_name person_age
-                    | polars sort-by id"#,
+                    | polars_dyn into-df -s {id: i64, person: {name: str, age: u8}} 
+                    | polars_dyn unnest person -s "_"
+                    | polars_dyn get id person_name person_age
+                    | polars_dyn sort-by id"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(

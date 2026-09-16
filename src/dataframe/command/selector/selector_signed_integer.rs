@@ -16,7 +16,7 @@ impl PluginCommand for SelectorSignedInteger {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector signed-integer"
+        "polars_dyn selector signed-integer"
     }
 
     fn description(&self) -> &str {
@@ -37,10 +37,10 @@ impl PluginCommand for SelectorSignedInteger {
         "baz": [2.0, 5.5],
         "zap": [-1, -2],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector signed-integer) |
-    polars sort-by bar zap |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector signed-integer) |
+    polars_dyn sort-by bar zap |
+    polars_dyn collect"#,
             description: "Select all signed integer columns",
             result: Some(
                 NuDataFrame::from(

@@ -18,7 +18,7 @@ impl PluginCommand for LazyAggregate {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars agg"
+        "polars_dyn agg"
     }
 
     fn description(&self) -> &str {
@@ -50,15 +50,15 @@ impl PluginCommand for LazyAggregate {
             Example {
                 description: "Group by and perform an aggregation",
                 example: r#"[[a b]; [1 2] [1 4] [2 6] [2 4]]
-                | polars into-lazy
-                | polars group-by a
-                | polars agg [
-                    (polars col b | polars min | polars as "b_min")
-                    (polars col b | polars max | polars as "b_max")
-                    (polars col b | polars sum | polars as "b_sum")
+                | polars_dyn into-lazy
+                | polars_dyn group-by a
+                | polars_dyn agg [
+                    (polars_dyn col b | polars_dyn min | polars_dyn as "b_min")
+                    (polars_dyn col b | polars_dyn max | polars_dyn as "b_max")
+                    (polars_dyn col b | polars_dyn sum | polars_dyn as "b_sum")
                  ]
-                | polars collect
-                | polars sort-by a"#,
+                | polars_dyn collect
+                | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -89,15 +89,15 @@ impl PluginCommand for LazyAggregate {
             Example {
                 description: "Group by and perform an aggregation using a record",
                 example: r#"[[a b]; [1 2] [1 4] [2 6] [2 4]]
-                | polars into-lazy
-                | polars group-by a
-                | polars agg {
-                    b_min: (polars col b | polars min)
-                    b_max: (polars col b | polars max)
-                    b_sum: (polars col b | polars sum)
+                | polars_dyn into-lazy
+                | polars_dyn group-by a
+                | polars_dyn agg {
+                    b_min: (polars_dyn col b | polars_dyn min)
+                    b_max: (polars_dyn col b | polars_dyn max)
+                    b_sum: (polars_dyn col b | polars_dyn sum)
                  }
-                | polars collect
-                | polars sort-by a"#,
+                | polars_dyn collect
+                | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

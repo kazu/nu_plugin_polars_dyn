@@ -15,7 +15,7 @@ impl PluginCommand for ExprMin {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars min"
+        "polars_dyn min"
     }
 
     fn description(&self) -> &str {
@@ -49,7 +49,7 @@ impl PluginCommand for ExprMin {
         vec![
             Example {
                 description: "Min value from columns in a dataframe",
-                example: "[[a b]; [6 2] [1 4] [4 1]] | polars into-df | polars min",
+                example: "[[a b]; [6 2] [1 4] [4 1]] | polars_dyn into-df | polars_dyn min",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -66,11 +66,11 @@ impl PluginCommand for ExprMin {
             Example {
                 description: "Min aggregation for a group-by",
                 example: r#"[[a b]; [one 2] [one 4] [two 1]]
-                | polars into-df
-                | polars group-by a
-                | polars agg (polars col b | polars min)
-                | polars collect
-                | polars sort-by a"#,
+                | polars_dyn into-df
+                | polars_dyn group-by a
+                | polars_dyn agg (polars_dyn col b | polars_dyn min)
+                | polars_dyn collect
+                | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

@@ -15,7 +15,7 @@ impl PluginCommand for ArgMax {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-max"
+        "polars_dyn arg-max"
     }
 
     fn description(&self) -> &str {
@@ -44,7 +44,7 @@ impl PluginCommand for ArgMax {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Returns index for max value",
-            example: "[1 3 2] | polars into-df | polars arg-max",
+            example: "[1 3 2] | polars_dyn into-df | polars_dyn arg-max",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new("arg_max".to_string(), vec![Value::test_int(1)])],

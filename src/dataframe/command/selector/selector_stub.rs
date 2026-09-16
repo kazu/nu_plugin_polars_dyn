@@ -10,7 +10,7 @@ impl PluginCommand for SelectorCmd {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector"
+        "polars_dyn selector"
     }
 
     fn description(&self) -> &str {
@@ -18,7 +18,7 @@ impl PluginCommand for SelectorCmd {
     }
 
     fn signature(&self) -> nu_protocol::Signature {
-        Signature::build("polars selector")
+        Signature::build("polars_dyn selector")
             .category(Category::Custom("expression".into()))
             .input_output_types(vec![(Type::Nothing, Type::String)])
     }
@@ -28,8 +28,8 @@ impl PluginCommand for SelectorCmd {
 You must use one of the subcommands below. Using this command as-is will only produce this help message.
 
 Selectors are expressions that can be used to select columns in dataframes based on various criteria.
-These selectors can be used with commands that accept column expressions, such as `polars select`,
-`polars with-column`, and others.
+These selectors can be used with commands that accept column expressions, such as `polars_dyn select`,
+`polars_dyn with-column`, and others.
 "#
     }
 

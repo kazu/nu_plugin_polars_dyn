@@ -13,7 +13,7 @@ impl PluginCommand for ExprNot {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars expr-not"
+        "polars_dyn expr-not"
     }
 
     fn description(&self) -> &str {
@@ -39,17 +39,17 @@ impl PluginCommand for ExprNot {
         vec![
             Example {
                 description: "Creates a not expression",
-                example: "(polars col a) > 2) | polars expr-not",
+                example: "(polars_dyn col a) > 2) | polars_dyn expr-not",
                 result: None,
             },
             Example {
                 description: "Adds a column showing which values of col a are not greater than 2",
-                example: "[[a]; [1] [2] [3] [4] [5]] | polars into-df 
-                    | polars with-column [(((polars col a) > 2)
-                    | polars expr-not
-                    | polars as a_expr_not)]
-                    | polars collect
-                    | polars sort-by a",
+                example: "[[a]; [1] [2] [3] [4] [5]] | polars_dyn into-df 
+                    | polars_dyn with-column [(((polars_dyn col a) > 2)
+                    | polars_dyn expr-not
+                    | polars_dyn as a_expr_not)]
+                    | polars_dyn collect
+                    | polars_dyn sort-by a",
                 result: Some(
                     NuDataFrame::from(
                         df!(

@@ -16,7 +16,7 @@ impl PluginCommand for SelectorUnsignedInteger {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector unsigned-integer"
+        "polars_dyn selector unsigned-integer"
     }
 
     fn description(&self) -> &str {
@@ -36,9 +36,9 @@ impl PluginCommand for SelectorUnsignedInteger {
         "bar": [123, 200],
         "baz": [2.0, 5.5],
     } |
-    polars into-df --as-columns -s {foo: str, bar: u8, baz: f32}|
-    polars select (polars selector unsigned-integer) |
-    polars collect"#,
+    polars_dyn into-df --as-columns -s {foo: str, bar: u8, baz: f32}|
+    polars_dyn select (polars_dyn selector unsigned-integer) |
+    polars_dyn collect"#,
             description: "Select all unsigned integer columns",
             result: Some(
                 NuDataFrame::from(

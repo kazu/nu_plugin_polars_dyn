@@ -173,7 +173,9 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 消す:
 - `open.rs`、cache の参照カウント・GC 往復・`store-get`、`NuPolarsTestData`(上の各節)。
-- plugin 側の cloud 認証層: `src/cloud/`(aws / azure / gcp)、`resource.rs` の scheme 分岐、
+- plugin 側の cloud 認証層: `src/cloud/`(aws / azure / gcp)、`resource.rs` が scheme ごとに
+  認証を組む処理(scheme 付きの path には `CloudOptions::default()` を渡し、認証は polars が
+  環境変数から拾う。`save` の cloud sink の経路はそのまま)、
   `aws-config` / `aws-credential-types`、`PolarsPlugin` が抱える tokio の `Runtime`。
   この層の価値は「AWS profile / SSO でも読める」の 1 点だけで、そのために AWS SDK と
   tokio を背負っている。

@@ -19,7 +19,7 @@ impl PluginCommand for ArgUnique {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-unique"
+        "polars_dyn arg-unique"
     }
 
     fn description(&self) -> &str {
@@ -48,7 +48,7 @@ impl PluginCommand for ArgUnique {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Returns indexes for unique values",
-            example: "[1 2 2 3 3] | polars into-df | polars arg-unique",
+            example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn arg-unique",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

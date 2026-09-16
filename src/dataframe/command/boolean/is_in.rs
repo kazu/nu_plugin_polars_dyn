@@ -16,7 +16,7 @@ impl PluginCommand for ExprIsIn {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars is-in"
+        "polars_dyn is-in"
     }
 
     fn description(&self) -> &str {
@@ -48,8 +48,8 @@ impl PluginCommand for ExprIsIn {
         vec![
             Example {
                 description: "Creates a is-in expression using a list",
-                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars into-df);
-            $df | polars with-column (polars col a | polars is-in [one two] | polars as a_in)"#,
+                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars_dyn into-df);
+            $df | polars_dyn with-column (polars_dyn col a | polars_dyn is-in [one two] | polars_dyn as a_in)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -83,8 +83,8 @@ impl PluginCommand for ExprIsIn {
             },
             Example {
                 description: "Creates a is-in expression using a polars series",
-                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars into-df);
-            $df | polars with-column (polars col a | polars is-in ([one two] | polars into-df) | polars as a_in)"#,
+                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars_dyn into-df);
+            $df | polars_dyn with-column (polars_dyn col a | polars_dyn is-in ([one two] | polars_dyn into-df) | polars_dyn as a_in)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -118,8 +118,8 @@ impl PluginCommand for ExprIsIn {
             },
             Example {
                 description: "Creates a is-in expression using a polars expr",
-                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars into-df);
-            $df | polars with-column (polars col a | polars is-in (polars lit [one two] | polars implode) | polars as a_in)"#,
+                example: r#"let df = ([[a b]; [one 1] [two 2] [three 3]] | polars_dyn into-df);
+            $df | polars_dyn with-column (polars_dyn col a | polars_dyn is-in (polars_dyn lit [one two] | polars_dyn implode) | polars_dyn as a_in)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

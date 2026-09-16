@@ -17,7 +17,7 @@ impl PluginCommand for SelectorDigit {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector digit"
+        "polars_dyn selector digit"
     }
 
     fn description(&self) -> &str {
@@ -43,10 +43,10 @@ impl PluginCommand for SelectorDigit {
     "abc": [3, 4],
     "4": [5, 6],
 } |
-polars into-df --as-columns |
-polars select (polars selector digit) |
-polars sort-by "123" "4" |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector digit) |
+polars_dyn sort-by "123" "4" |
+polars_dyn collect"#,
                 description: "Select columns whose names consist entirely of digits",
                 result: Some(
                     NuDataFrame::from(
@@ -64,9 +64,9 @@ polars collect"#,
     "123": [1, 2],
     "abc": [3, 4],
 } |
-polars into-df --as-columns |
-polars select (polars selector digit --ascii-only) |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector digit --ascii-only) |
+polars_dyn collect"#,
                 description: "Select digit-named columns using ASCII digits only",
                 result: Some(
                     NuDataFrame::from(

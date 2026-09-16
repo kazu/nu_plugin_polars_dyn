@@ -17,7 +17,7 @@ impl PluginCommand for NUnique {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars n-unique"
+        "polars_dyn n-unique"
     }
 
     fn description(&self) -> &str {
@@ -51,7 +51,7 @@ impl PluginCommand for NUnique {
         vec![
             Example {
                 description: "Counts unique values",
-                example: "[1 1 2 2 3 3 4] | polars into-df | polars n-unique",
+                example: "[1 1 2 2 3 3 4] | polars_dyn into-df | polars_dyn n-unique",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -67,7 +67,7 @@ impl PluginCommand for NUnique {
             },
             Example {
                 description: "Creates a is n-unique expression from a column",
-                example: "polars col a | polars n-unique",
+                example: "polars_dyn col a | polars_dyn n-unique",
                 result: None,
             },
         ]

@@ -13,7 +13,7 @@ pub struct CutSeries;
 impl PluginCommand for CutSeries {
     type Plugin = PolarsPlugin;
     fn name(&self) -> &str {
-        "polars cut"
+        "polars_dyn cut"
     }
 
     fn description(&self) -> &str {
@@ -47,7 +47,7 @@ impl PluginCommand for CutSeries {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Divide the column into three categories.",
-            example: r#"[-2, -1, 0, 1, 2] | polars into-df | polars cut [-1, 1] --labels ["a", "b", "c"]"#,
+            example: r#"[-2, -1, 0, 1, 2] | polars_dyn into-df | polars_dyn cut [-1, 1] --labels ["a", "b", "c"]"#,
             result: None,
         }]
     }

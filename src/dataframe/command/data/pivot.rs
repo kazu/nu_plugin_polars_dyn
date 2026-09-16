@@ -26,7 +26,7 @@ impl PluginCommand for PivotDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars pivot"
+        "polars_dyn pivot"
     }
 
     fn description(&self) -> &str {
@@ -113,10 +113,10 @@ impl PluginCommand for PivotDF {
         "test_1": [98, 99, 61, 58],
         "test_2": [100, 100, 60, 60],
     } | 
-    polars into-df --as-columns | 
-    polars pivot --on subject --on-cols [maths physics] --index name --values test_1 |
-    polars sort-by name maths physics |
-    polars collect"#,
+    polars_dyn into-df --as-columns | 
+    polars_dyn pivot --on subject --on-cols [maths physics] --index name --values test_1 |
+    polars_dyn sort-by name maths physics |
+    polars_dyn collect"#,
                 description: "Given a set of test scores, reshape so we have one row per student, with different subjects as columns, and their `test_1` scores as values",
                 result: Some(
                     NuDataFrame::from(
@@ -137,10 +137,10 @@ impl PluginCommand for PivotDF {
         "test_1": [98, 99, 61, 58],
         "test_2": [100, 100, 60, 60],
     } | 
-    polars into-df --as-columns | 
-    polars pivot --on subject --index name --values test_1 |
-    polars sort-by name maths physics |
-    polars collect"#,
+    polars_dyn into-df --as-columns | 
+    polars_dyn pivot --on subject --index name --values test_1 |
+    polars_dyn sort-by name maths physics |
+    polars_dyn collect"#,
                 description: "Given a set of test scores, reshape so we have one row per student, with different subjects as columns, and their `test_1` scores as values, without specifying --on-cols",
                 result: Some(
                     NuDataFrame::from(
@@ -161,10 +161,10 @@ impl PluginCommand for PivotDF {
         "test_1": [98, 99, 61, 58],
         "test_2": [100, 100, 60, 60],
     } |
-    polars into-df --as-columns |
-    polars pivot --on subject --on-cols [maths physics] --index name --values (polars selector starts-with test) |
-    polars sort-by name test_1_maths test_1_physics test_2_maths test_2_physics |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn pivot --on subject --on-cols [maths physics] --index name --values (polars_dyn selector starts-with test) |
+    polars_dyn sort-by name test_1_maths test_1_physics test_2_maths test_2_physics |
+    polars_dyn collect"#,
                 description: "Given a set of test scores, reshape so we have one row per student, utilize a selector for the values come to include all test scores",
                 result: Some(
                     NuDataFrame::from(
@@ -187,10 +187,10 @@ impl PluginCommand for PivotDF {
         "foo": [0, 1, 2, 2, 7, 1],
         "bar": [0, 2, 0, 0, 9, 4],
     } |
-    polars into-df --as-columns |
-    polars pivot --on col --on-cols [a b] --index ix --aggregate sum |
-    polars sort-by ix foo_a foo_b bar_a bar_b |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn pivot --on col --on-cols [a b] --index ix --aggregate sum |
+    polars_dyn sort-by ix foo_a foo_b bar_a bar_b |
+    polars_dyn collect"#,
                 description: "Given a DataFrame with duplicate entries for the pivot columns, use the `aggregate` flag to specify how to aggregate values for those duplicates. In this example, we sum the `foo` and `bar` values for rows with the same `ix` and `col` values.",
                 result: Some(
                     NuDataFrame::from(

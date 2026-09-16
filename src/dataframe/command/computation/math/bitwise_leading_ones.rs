@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathBitwiseLeadingOnes {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math bitwise-leading-ones"
+        "polars_dyn math bitwise-leading-ones"
     }
 
     fn description(&self) -> &str {
@@ -44,9 +44,9 @@ impl PluginCommand for ExprMathBitwiseLeadingOnes {
         vec![Example {
             description: "Count the number of leading set bits for each element in an integer column",
             example: "[[n]; [0] [-1] [127]] | 
-    polars into-df | 
-    polars select (polars col n | polars math bitwise-leading-ones) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col n | polars_dyn math bitwise-leading-ones) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!(

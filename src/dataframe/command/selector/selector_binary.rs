@@ -14,7 +14,7 @@ impl PluginCommand for SelectorBinary {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector binary"
+        "polars_dyn selector binary"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorBinary {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector binary",
+            example: "polars_dyn selector binary",
             description: "Create a selector for binary columns",
             result: None,
         }]

@@ -20,7 +20,7 @@ impl PluginCommand for Shift {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars shift"
+        "polars_dyn shift"
     }
 
     fn description(&self) -> &str {
@@ -61,7 +61,7 @@ impl PluginCommand for Shift {
         vec![
             Example {
                 description: "Shifts the values by a given period",
-                example: "[1 2 2 3 3] | polars into-df | polars shift 2 | polars drop-nulls",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn shift 2 | polars_dyn drop-nulls",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -77,7 +77,7 @@ impl PluginCommand for Shift {
             },
             Example {
                 description: "Shifts the values by a given period, fill absent values with 0",
-                example: "[1 2 2 3 3] | polars into-lazy | polars shift 2 --fill 0 | polars collect",
+                example: "[1 2 2 3 3] | polars_dyn into-lazy | polars_dyn shift 2 --fill 0 | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -100,9 +100,9 @@ impl PluginCommand for Shift {
             Example {
                 description: "Shift values of a column, fill absent values with 0",
                 example: "[[a]; [1] [2] [2] [3] [3]]
-                    | polars into-lazy
-                    | polars with-column {b: (polars col a | polars shift 2 --fill 0)}
-                    | polars collect",
+                    | polars_dyn into-lazy
+                    | polars_dyn with-column {b: (polars_dyn col a | polars_dyn shift 2 --fill 0)}
+                    | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

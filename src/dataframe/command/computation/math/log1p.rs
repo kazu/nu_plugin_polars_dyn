@@ -12,7 +12,7 @@ impl PluginCommand for ExprMathLog1p {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math log1p"
+        "polars_dyn math log1p"
     }
 
     fn description(&self) -> &str {
@@ -38,9 +38,9 @@ impl PluginCommand for ExprMathLog1p {
         vec![Example {
             description: "Compute the element-wise natural log of 1 + x for a column",
             example: "[[a]; [0] [1] [2]] | 
-    polars into-df | 
-    polars select (polars col a | polars math log1p) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math log1p) | 
+    polars_dyn collect",
             result: None,
         }]
     }

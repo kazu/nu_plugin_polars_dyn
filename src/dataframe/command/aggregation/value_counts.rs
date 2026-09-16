@@ -17,7 +17,7 @@ impl PluginCommand for ValueCount {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars value-counts"
+        "polars_dyn value-counts"
     }
 
     fn description(&self) -> &str {
@@ -60,7 +60,7 @@ impl PluginCommand for ValueCount {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Calculates value counts",
-            example: "[5 5 5 5 6 6] | polars into-df | polars value-counts | polars sort-by count",
+            example: "[5 5 5 5 6 6] | polars_dyn into-df | polars_dyn value-counts | polars_dyn sort-by count",
             result: Some(
                 NuDataFrame::from(
                     df!(

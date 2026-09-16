@@ -21,7 +21,7 @@ impl PluginCommand for GetOrdinal {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get-ordinal"
+        "polars_dyn get-ordinal"
     }
 
     fn description(&self) -> &str {
@@ -56,8 +56,8 @@ impl PluginCommand for GetOrdinal {
             Example {
                 description: "Returns ordinal from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars get-ordinal"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn get-ordinal"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[217i16, 217]),
@@ -70,8 +70,8 @@ impl PluginCommand for GetOrdinal {
             Example {
                 description: "Returns ordinal from a date in an expression",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars select (polars col 0 | polars get-ordinal)"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn col 0 | polars_dyn get-ordinal)"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[217i16, 217]),

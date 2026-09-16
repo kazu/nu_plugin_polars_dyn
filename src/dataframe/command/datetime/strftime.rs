@@ -21,7 +21,7 @@ impl PluginCommand for StrFTime {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars strftime"
+        "polars_dyn strftime"
     }
 
     fn description(&self) -> &str {
@@ -57,8 +57,8 @@ impl PluginCommand for StrFTime {
             Example {
                 description: "Formats date column as a string",
                 example: r#"let date = '2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC';
-    let df = ([[a]; [$date]] | polars into-df);
-    let df2 = $df | polars with-column [(polars col a | polars strftime "%Y/%m/%d" | polars as b)] | polars collect;
+    let df = ([[a]; [$date]] | polars_dyn into-df);
+    let df2 = $df | polars_dyn with-column [(polars_dyn col a | polars_dyn strftime "%Y/%m/%d" | polars_dyn as b)] | polars_dyn collect;
     $df2.b"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
@@ -76,8 +76,8 @@ impl PluginCommand for StrFTime {
             Example {
                 description: "Formats date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars strftime "%Y/%m/%d""#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn strftime "%Y/%m/%d""#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

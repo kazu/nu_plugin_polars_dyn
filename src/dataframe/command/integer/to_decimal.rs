@@ -19,7 +19,7 @@ impl PluginCommand for ToDecimal {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars decimal"
+        "polars_dyn decimal"
     }
 
     fn description(&self) -> &str {
@@ -53,7 +53,7 @@ impl PluginCommand for ToDecimal {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Modifies strings to decimal",
-            example: "[[a b]; [1, '2.4']] | polars into-df | polars select (polars col b | polars decimal 2) | polars collect",
+            example: "[[a b]; [1, '2.4']] | polars_dyn into-df | polars_dyn select (polars_dyn col b | polars_dyn decimal 2) | polars_dyn collect",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new("b".to_string(), vec![Value::test_float(2.40)])],

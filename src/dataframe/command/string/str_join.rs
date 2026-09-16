@@ -21,7 +21,7 @@ impl PluginCommand for StrJoin {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars str-join"
+        "polars_dyn str-join"
     }
 
     fn description(&self) -> &str {
@@ -58,7 +58,7 @@ impl PluginCommand for StrJoin {
         vec![
             Example {
                 description: "Join strings in a column",
-                example: r#"[[a]; [abc] [abc] [abc]] | polars into-df | polars select (polars col a | polars str-join -d ',') | polars collect"#,
+                example: r#"[[a]; [abc] [abc] [abc]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn str-join -d ',') | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -74,8 +74,8 @@ impl PluginCommand for StrJoin {
             },
             Example {
                 description: "StrJoin strings across two series",
-                example: r#"let other = ([za xs cd] | polars into-df);
-    [abc abc abc] | polars into-df | polars str-join $other"#,
+                example: r#"let other = ([za xs cd] | polars_dyn into-df);
+    [abc abc abc] | polars_dyn into-df | polars_dyn str-join $other"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

@@ -23,7 +23,7 @@ impl PluginCommand for Truncate {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars truncate"
+        "polars_dyn truncate"
     }
 
     fn description(&self) -> &str {
@@ -53,7 +53,7 @@ impl PluginCommand for Truncate {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Truncate a series of dates by period length",
-            example: r#"seq date -b 2025-01-01 --periods 4 --increment 6wk -o "%Y-%m-%d %H:%M:%S" | polars into-df | polars as-datetime "%F %H:%M:%S" --naive | polars select datetime (polars col datetime | polars truncate 5d37m | polars as truncated)"#,
+            example: r#"seq date -b 2025-01-01 --periods 4 --increment 6wk -o "%Y-%m-%d %H:%M:%S" | polars_dyn into-df | polars_dyn as-datetime "%F %H:%M:%S" --naive | polars_dyn select datetime (polars_dyn col datetime | polars_dyn truncate 5d37m | polars_dyn as truncated)"#,
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

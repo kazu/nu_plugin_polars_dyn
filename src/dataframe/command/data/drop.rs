@@ -17,7 +17,7 @@ impl PluginCommand for DropDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars drop"
+        "polars_dyn drop"
     }
 
     fn description(&self) -> &str {
@@ -43,7 +43,7 @@ impl PluginCommand for DropDF {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "drop column a",
-            example: "[[a b]; [1 2] [3 4]] | polars into-df | polars drop a",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn drop a",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

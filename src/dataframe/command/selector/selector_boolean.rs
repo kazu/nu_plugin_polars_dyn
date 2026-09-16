@@ -16,7 +16,7 @@ impl PluginCommand for SelectorBoolean {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector boolean"
+        "polars_dyn selector boolean"
     }
 
     fn description(&self) -> &str {
@@ -36,9 +36,9 @@ impl PluginCommand for SelectorBoolean {
     "active": [true, false],
     "score": [1, 2],
 } |
-polars into-df --as-columns |
-polars select (polars selector boolean) |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector boolean) |
+polars_dyn collect"#,
             description: "Select all boolean columns",
             result: Some(
                 NuDataFrame::from(

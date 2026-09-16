@@ -12,7 +12,7 @@ impl PluginCommand for ListDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars store-ls"
+        "polars_dyn store-ls"
     }
 
     fn description(&self) -> &str {
@@ -26,8 +26,8 @@ impl PluginCommand for ListDF {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Creates a new dataframe and shows it in the dataframe list",
-            example: r#"let test = ([[a b];[1 2] [3 4]] | polars into-df);
-    polars store-ls"#,
+            example: r#"let test = ([[a b];[1 2] [3 4]] | polars_dyn into-df);
+    polars_dyn store-ls"#,
             result: None,
         }]
     }

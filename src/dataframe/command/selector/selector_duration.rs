@@ -14,7 +14,7 @@ impl PluginCommand for SelectorDuration {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector duration"
+        "polars_dyn selector duration"
     }
 
     fn description(&self) -> &str {
@@ -36,12 +36,12 @@ impl PluginCommand for SelectorDuration {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
-                example: "polars selector duration",
+                example: "polars_dyn selector duration",
                 description: "Create a selector for all duration columns",
                 result: None,
             },
             Example {
-                example: "polars selector duration --time-unit [ns us]",
+                example: "polars_dyn selector duration --time-unit [ns us]",
                 description: "Create a selector for nanosecond or microsecond duration columns",
                 result: None,
             },

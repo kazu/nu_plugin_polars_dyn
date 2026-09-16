@@ -16,7 +16,7 @@ impl PluginCommand for SelectorByDtype {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector by-dtype"
+        "polars_dyn selector by-dtype"
     }
 
     fn description(&self) -> &str {
@@ -41,15 +41,15 @@ impl PluginCommand for SelectorByDtype {
         vec![
             Example {
                 description: "Create a selector for numeric columns",
-                example: "polars selector by-dtype i64 f64",
+                example: "polars_dyn selector by-dtype i64 f64",
                 result: None,
             },
             Example {
                 description: "Double all integer columns using with-column",
                 example: r#"[[a b c]; [1 2 "x"] [3 4 "y"]]
-                    | polars into-df
-                    | polars with-column ((polars selector by-dtype i64) * 2)
-                    | polars collect"#,
+                    | polars_dyn into-df
+                    | polars_dyn with-column ((polars_dyn selector by-dtype i64) * 2)
+                    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

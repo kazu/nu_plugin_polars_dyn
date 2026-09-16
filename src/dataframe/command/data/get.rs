@@ -17,7 +17,7 @@ impl PluginCommand for GetDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get"
+        "polars_dyn get"
     }
 
     fn description(&self) -> &str {
@@ -43,7 +43,7 @@ impl PluginCommand for GetDF {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Returns the selected column",
-            example: "[[a b]; [1 2] [3 4]] | polars into-df | polars get a",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn get a",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

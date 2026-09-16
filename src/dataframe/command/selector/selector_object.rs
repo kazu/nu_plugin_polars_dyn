@@ -14,7 +14,7 @@ impl PluginCommand for SelectorObject {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector object"
+        "polars_dyn selector object"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorObject {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector object",
+            example: "polars_dyn selector object",
             description: "Create a selector for object columns",
             result: None,
         }]

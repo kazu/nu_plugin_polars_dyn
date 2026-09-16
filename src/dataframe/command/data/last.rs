@@ -22,7 +22,7 @@ impl PluginCommand for LastDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars last"
+        "polars_dyn last"
     }
 
     fn description(&self) -> &str {
@@ -57,7 +57,7 @@ impl PluginCommand for LastDF {
         vec![
             Example {
                 description: "Create new dataframe with last rows",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars last 1",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn last 1",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -73,12 +73,12 @@ impl PluginCommand for LastDF {
             },
             Example {
                 description: "Creates a last expression from a column",
-                example: "polars col a | polars last",
+                example: "polars_dyn col a | polars_dyn last",
                 result: None,
             },
             Example {
                 description: "Aggregate the last values in the group.",
-                example: "[[a b c d]; [1 0.5 true Apple] [2 0.5 true Orange] [2 4 true Apple] [3 10 false Apple] [4 13 false Banana] [5 14 true Banana]] | polars into-df -s {a: u8, b: f32, c: bool, d: str} | polars group-by d | polars last | polars sort-by [a] | polars collect",
+                example: "[[a b c d]; [1 0.5 true Apple] [2 0.5 true Orange] [2 4 true Apple] [3 10 false Apple] [4 13 false Banana] [5 14 true Banana]] | polars_dyn into-df -s {a: u8, b: f32, c: bool, d: str} | polars_dyn group-by d | polars_dyn last | polars_dyn sort-by [a] | polars_dyn collect",
                 result: Some(
                     NuDataFrame::new(
                         false,

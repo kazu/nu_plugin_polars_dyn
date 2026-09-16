@@ -22,7 +22,7 @@ impl PluginCommand for Summary {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars summary"
+        "polars_dyn summary"
     }
 
     fn description(&self) -> &str {
@@ -53,7 +53,7 @@ impl PluginCommand for Summary {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "list dataframe descriptives",
-            example: "[[a b]; [1 1] [1 1]] | polars into-df | polars summary",
+            example: "[[a b]; [1 1] [1 1]] | polars_dyn into-df | polars_dyn summary",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

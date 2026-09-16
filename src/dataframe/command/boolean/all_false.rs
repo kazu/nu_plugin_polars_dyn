@@ -14,7 +14,7 @@ impl PluginCommand for AllFalse {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars all-false"
+        "polars_dyn all-false"
     }
 
     fn description(&self) -> &str {
@@ -40,7 +40,7 @@ impl PluginCommand for AllFalse {
         vec![
             Example {
                 description: "Returns true if all values are false",
-                example: "[false false false] | polars into-df | polars all-false",
+                example: "[false false false] | polars_dyn into-df | polars_dyn all-false",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -56,9 +56,9 @@ impl PluginCommand for AllFalse {
             },
             Example {
                 description: "Checks the result from a comparison",
-                example: r#"let s = ([5 6 2 10] | polars into-df);
+                example: r#"let s = ([5 6 2 10] | polars_dyn into-df);
     let res = ($s > 9);
-    $res | polars all-false"#,
+    $res | polars_dyn all-false"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

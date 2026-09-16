@@ -12,7 +12,7 @@ impl PluginCommand for SelectorNot {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector not"
+        "polars_dyn selector not"
     }
 
     fn description(&self) -> &str {
@@ -31,7 +31,7 @@ impl PluginCommand for SelectorNot {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Inverts selector",
-            example: "polars selector first | polars selector not",
+            example: "polars_dyn selector first | polars_dyn selector not",
             result: None,
         }]
     }

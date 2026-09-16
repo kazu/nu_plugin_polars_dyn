@@ -18,7 +18,7 @@ impl PluginCommand for SelectorContains {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector contains"
+        "polars_dyn selector contains"
     }
 
     fn description(&self) -> &str {
@@ -44,10 +44,10 @@ impl PluginCommand for SelectorContains {
     "foo_baz": [3.0, 4.0],
     "qux": [5, 6],
 } |
-polars into-df --as-columns |
-polars select (polars selector contains foo) |
-polars sort-by foo_bar foo_baz |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector contains foo) |
+polars_dyn sort-by foo_bar foo_baz |
+polars_dyn collect"#,
                 description: "Select columns whose names contain 'foo'",
                 result: Some(
                     NuDataFrame::from(
@@ -66,10 +66,10 @@ polars collect"#,
     "bar_x": [3, 4],
     "baz": [5, 6],
 } |
-polars into-df --as-columns |
-polars select (polars selector contains foo bar) |
-polars sort-by foo_x bar_x |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector contains foo bar) |
+polars_dyn sort-by foo_x bar_x |
+polars_dyn collect"#,
                 description: "Select columns whose names contain 'foo' or 'bar'",
                 result: Some(
                     NuDataFrame::from(

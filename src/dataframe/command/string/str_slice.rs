@@ -24,7 +24,7 @@ impl PluginCommand for StrSlice {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars str-slice"
+        "polars_dyn str-slice"
     }
 
     fn description(&self) -> &str {
@@ -60,7 +60,7 @@ impl PluginCommand for StrSlice {
         vec![
             Example {
                 description: "Creates slices from the strings in a specified column",
-                example: "[[a]; [abcded] [abc321] [abc123]] | polars into-df | polars select (polars col a | polars str-slice 1 --length 2) | polars collect",
+                example: "[[a]; [abcded] [abc321] [abc123]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn str-slice 1 --length 2) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -80,7 +80,7 @@ impl PluginCommand for StrSlice {
             },
             Example {
                 description: "Creates slices from the strings",
-                example: "[abcded abc321 abc123] | polars into-df | polars str-slice 1 --length 2",
+                example: "[abcded abc321 abc123] | polars_dyn into-df | polars_dyn str-slice 1 --length 2",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -100,7 +100,7 @@ impl PluginCommand for StrSlice {
             },
             Example {
                 description: "Creates slices from the strings without length",
-                example: "[abcded abc321 abc123] | polars into-df | polars str-slice 1",
+                example: "[abcded abc321 abc123] | polars_dyn into-df | polars_dyn str-slice 1",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

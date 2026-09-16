@@ -50,7 +50,7 @@ impl PluginCommand for Cumulative {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars cumulative"
+        "polars_dyn cumulative"
     }
 
     fn description(&self) -> &str {
@@ -91,9 +91,9 @@ impl PluginCommand for Cumulative {
             Example {
                 description: "Cumulative sum for a column",
                 example: "[[a]; [1] [2] [3] [4] [5]]
-                    | polars into-df
-                    | polars select (polars col a | polars cumulative sum | polars as cum_a)
-                    | polars collect",
+                    | polars_dyn into-df
+                    | polars_dyn select (polars_dyn col a | polars_dyn cumulative sum | polars_dyn as cum_a)
+                    | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -115,7 +115,7 @@ impl PluginCommand for Cumulative {
             },
             Example {
                 description: "Cumulative sum for a series",
-                example: "[1 2 3 4 5] | polars into-df | polars cumulative sum",
+                example: "[1 2 3 4 5] | polars_dyn into-df | polars_dyn cumulative sum",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -137,7 +137,7 @@ impl PluginCommand for Cumulative {
             },
             Example {
                 description: "Cumulative sum for a series in reverse order",
-                example: "[1 2 3 4 5] | polars into-df | polars cumulative sum --reverse",
+                example: "[1 2 3 4 5] | polars_dyn into-df | polars_dyn cumulative sum --reverse",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

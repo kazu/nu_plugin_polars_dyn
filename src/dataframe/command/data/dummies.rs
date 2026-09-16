@@ -12,7 +12,7 @@ impl PluginCommand for Dummies {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars dummies"
+        "polars_dyn dummies"
     }
 
     fn description(&self) -> &str {
@@ -41,7 +41,7 @@ impl PluginCommand for Dummies {
         vec![
             Example {
                 description: "Create new dataframe with dummy variables from a dataframe",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars dummies",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn dummies",
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![
@@ -58,7 +58,7 @@ impl PluginCommand for Dummies {
             },
             Example {
                 description: "Create new dataframe with dummy variables from a series",
-                example: "[1 2 2 3 3] | polars into-df | polars dummies",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn dummies",
                 result: Some(
                     NuDataFrame::try_from_series_vec(
                         vec![

@@ -22,7 +22,7 @@ impl PluginCommand for ConcatDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars concat"
+        "polars_dyn concat"
     }
 
     fn description(&self) -> &str {
@@ -61,10 +61,10 @@ impl PluginCommand for ConcatDF {
         vec![
             Example {
                 description: "Concatenates two dataframes with the dataframe in the pipeline.",
-                example: "[[a b]; [1 2]] | polars into-df 
-                    | polars concat ([[a b]; [3 4]] | polars into-df) ([[a b]; [5 6]] | polars into-df) 
-                    | polars collect 
-                    | polars sort-by [a b]",
+                example: "[[a b]; [1 2]] | polars_dyn into-df 
+                    | polars_dyn concat ([[a b]; [3 4]] | polars_dyn into-df) ([[a b]; [5 6]] | polars_dyn into-df) 
+                    | polars_dyn collect 
+                    | polars_dyn sort-by [a b]",
                 result: Some(
                     NuDataFrame::from(
                         df!(
@@ -78,9 +78,9 @@ impl PluginCommand for ConcatDF {
             },
             Example {
                 description: "Concatenates three dataframes together",
-                example: "polars concat ([[a b]; [1 2]] | polars into-df) ([[a b]; [3 4]] | polars into-df) ([[a b]; [5 6]] | polars into-df) 
-                    | polars collect 
-                    | polars sort-by [a b]",
+                example: "polars_dyn concat ([[a b]; [1 2]] | polars_dyn into-df) ([[a b]; [3 4]] | polars_dyn into-df) ([[a b]; [5 6]] | polars_dyn into-df) 
+                    | polars_dyn collect 
+                    | polars_dyn sort-by [a b]",
                 result: Some(
                     NuDataFrame::from(
                         df!(

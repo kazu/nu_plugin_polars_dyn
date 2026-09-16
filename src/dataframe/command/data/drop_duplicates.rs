@@ -20,7 +20,7 @@ impl PluginCommand for DropDuplicates {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars drop-duplicates"
+        "polars_dyn drop-duplicates"
     }
 
     fn description(&self) -> &str {
@@ -56,9 +56,9 @@ impl PluginCommand for DropDuplicates {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "drop duplicates",
-            example: "[[a b]; [1 2] [3 4] [1 2]] | polars into-df
-                | polars drop-duplicates
-                | polars sort-by a",
+            example: "[[a b]; [1 2] [3 4] [1 2]] | polars_dyn into-df
+                | polars_dyn drop-duplicates
+                | polars_dyn sort-by a",
             result: Some(
                 NuDataFrame::from(
                     df!(

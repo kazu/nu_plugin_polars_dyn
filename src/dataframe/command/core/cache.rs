@@ -13,7 +13,7 @@ impl PluginCommand for LazyCache {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars cache"
+        "polars_dyn cache"
     }
 
     fn description(&self) -> &str {
@@ -38,10 +38,10 @@ impl PluginCommand for LazyCache {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Caches the result into a new LazyFrame",
-            example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df 
-                | polars reverse 
-                | polars cache
-                | polars sort-by a",
+            example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df 
+                | polars_dyn reverse 
+                | polars_dyn cache
+                | polars_dyn sort-by a",
             result: Some(
                 NuDataFrame::from(
                     df!(

@@ -29,7 +29,7 @@ impl PluginCommand for AsDateTime {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars as-datetime"
+        "polars_dyn as-datetime"
     }
 
     fn description(&self) -> &str {
@@ -93,7 +93,7 @@ impl PluginCommand for AsDateTime {
         vec![
             Example {
                 description: "Converts string to datetime",
-                example: r#"["2021-12-30 00:00:00 -0400" "2021-12-31 00:00:00 -0400"] | polars into-df | polars as-datetime "%Y-%m-%d %H:%M:%S %z""#,
+                example: r#"["2021-12-30 00:00:00 -0400" "2021-12-31 00:00:00 -0400"] | polars_dyn into-df | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S %z""#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -126,7 +126,7 @@ impl PluginCommand for AsDateTime {
             },
             Example {
                 description: "Converts string to datetime with high resolutions",
-                example: r#"["2021-12-30 00:00:00.123456789" "2021-12-31 00:00:00.123456789"] | polars into-df | polars as-datetime "%Y-%m-%d %H:%M:%S.%9f" --naive"#,
+                example: r#"["2021-12-30 00:00:00.123456789" "2021-12-31 00:00:00.123456789"] | polars_dyn into-df | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S.%9f" --naive"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -164,7 +164,7 @@ impl PluginCommand for AsDateTime {
             },
             Example {
                 description: "Converts string to datetime using the `--not-exact` flag even with excessive symbols",
-                example: r#"["2021-12-30 00:00:00 GMT+4"] | polars into-df | polars as-datetime "%Y-%m-%d %H:%M:%S" --not-exact --naive"#,
+                example: r#"["2021-12-30 00:00:00 GMT+4"] | polars_dyn into-df | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S" --not-exact --naive"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -192,7 +192,7 @@ impl PluginCommand for AsDateTime {
             },
             Example {
                 description: "Converts string to datetime using the `--not-exact` flag even with excessive symbols in an expression",
-                example: r#"["2025-11-02 00:00:00", "2025-11-02 01:00:00", "2025-11-02 02:00:00", "2025-11-02 03:00:00"] | polars into-df | polars select (polars col 0 | polars as-datetime "%Y-%m-%d %H:%M:%S")"#,
+                example: r#"["2025-11-02 00:00:00", "2025-11-02 01:00:00", "2025-11-02 02:00:00", "2025-11-02 03:00:00"] | polars_dyn into-df | polars_dyn select (polars_dyn col 0 | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S")"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

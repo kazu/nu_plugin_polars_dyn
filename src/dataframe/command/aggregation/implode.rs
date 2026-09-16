@@ -14,7 +14,7 @@ impl PluginCommand for ExprImplode {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars implode"
+        "polars_dyn implode"
     }
 
     fn description(&self) -> &str {
@@ -44,7 +44,7 @@ impl PluginCommand for ExprImplode {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Create two lists for columns a and b with all the rows as values.",
-            example: "[[a b]; [1 4] [2 5] [3 6]] | polars into-df | polars select (polars col '*' | polars implode) | polars collect",
+            example: "[[a b]; [1 4] [2 5] [3 6]] | polars_dyn into-df | polars_dyn select (polars_dyn col '*' | polars_dyn implode) | polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!(

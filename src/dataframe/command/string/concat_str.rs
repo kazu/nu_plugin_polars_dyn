@@ -16,7 +16,7 @@ impl PluginCommand for ExprConcatStr {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars concat-str"
+        "polars_dyn concat-str"
     }
 
     fn description(&self) -> &str {
@@ -42,8 +42,8 @@ impl PluginCommand for ExprConcatStr {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Creates a concat string expression",
-            example: r#"let df = ([[a b c]; [one two 1] [three four 2]] | polars into-df);
-    $df | polars with-column ((polars concat-str "-" [(polars col a) (polars col b) ((polars col c) * 2)]) | polars as concat)"#,
+            example: r#"let df = ([[a b c]; [one two 1] [three four 2]] | polars_dyn into-df);
+    $df | polars_dyn with-column ((polars_dyn concat-str "-" [(polars_dyn col a) (polars_dyn col b) ((polars_dyn col c) * 2)]) | polars_dyn as concat)"#,
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

@@ -17,7 +17,7 @@ impl PluginCommand for SelectorAlphanumeric {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector alphanumeric"
+        "polars_dyn selector alphanumeric"
     }
 
     fn description(&self) -> &str {
@@ -42,10 +42,10 @@ impl PluginCommand for SelectorAlphanumeric {
                     "00prefix": ["01:aa", "02:bb", "03:cc"],
                     "last col": ["x", "y", "z"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alphanumeric) |
-                polars sort-by 00prefix flagged |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alphanumeric) |
+                polars_dyn sort-by 00prefix flagged |
+                polars_dyn collect
                 "#,
                 description: "Select columns with alphanumeric names.",
                 result: Some(
@@ -67,10 +67,10 @@ impl PluginCommand for SelectorAlphanumeric {
                     "00prefix": ["01:aa", "02:bb", "03:cc"],
                     "last col": ["x", "y", "z"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alphanumeric --ignore-spaces) |
-                polars sort-by 00prefix 'last col' flagged |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alphanumeric --ignore-spaces) |
+                polars_dyn sort-by 00prefix 'last col' flagged |
+                polars_dyn collect
                 "#,
                 description: "Select columns with alphanumeric names ignoring spaces.",
                 result: Some(
@@ -93,10 +93,10 @@ impl PluginCommand for SelectorAlphanumeric {
                     "00prefix": ["01:aa", "02:bb", "03:cc"],
                     "last col": ["x", "y", "z"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alphanumeric | polars selector not) |
-                polars sort-by '1st_col' 'last col' |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alphanumeric | polars_dyn selector not) |
+                polars_dyn sort-by '1st_col' 'last col' |
+                polars_dyn collect
                 "#,
                 description: r#"Select all columns *except* for those with alphanumeric names."#,
                 result: Some(
@@ -118,9 +118,9 @@ impl PluginCommand for SelectorAlphanumeric {
                     "00prefix": ["01:aa", "02:bb", "03:cc"],
                     "last col": ["x", "y", "z"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alphanumeric --ignore-spaces | polars selector not) |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alphanumeric --ignore-spaces | polars_dyn selector not) |
+                polars_dyn collect
                 "#,
                 description: r#"Select all columns *except* for those with alphanumeric names, ignoring spaces."#,
                 result: Some(

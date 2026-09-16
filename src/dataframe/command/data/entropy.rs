@@ -18,7 +18,7 @@ impl PluginCommand for Entropy {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars entropy"
+        "polars_dyn entropy"
     }
 
     fn description(&self) -> &str {
@@ -56,7 +56,7 @@ impl PluginCommand for Entropy {
         vec![
             Example {
                 description: "Compute the entropy of a column expression",
-                example: "[[a]; [1] [2] [3]] | polars into-df | polars select (polars col a | polars entropy --base 2) | polars collect",
+                example: "[[a]; [1] [2] [3]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn entropy --base 2) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::new(
                         false,
@@ -70,7 +70,7 @@ impl PluginCommand for Entropy {
             },
             Example {
                 description: "Compute the entropy of a column expression without normalization",
-                example: "[[a]; [1] [2] [3]] | polars into-df | polars select (polars col a | polars entropy --base 2 --normalize false) | polars collect",
+                example: "[[a]; [1] [2] [3]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn entropy --base 2 --normalize false) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::new(
                         false,

@@ -23,7 +23,7 @@ impl PluginCommand for AsDate {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars as-date"
+        "polars_dyn as-date"
     }
 
     fn description(&self) -> &str {
@@ -66,7 +66,7 @@ impl PluginCommand for AsDate {
         vec![
             Example {
                 description: "Converts string to date",
-                example: r#"["2021-12-30" "2021-12-31"] | polars into-df | polars as-date "%Y-%m-%d""#,
+                example: r#"["2021-12-30" "2021-12-31"] | polars_dyn into-df | polars_dyn as-date "%Y-%m-%d""#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -103,7 +103,7 @@ impl PluginCommand for AsDate {
             },
             Example {
                 description: "Converts string to date",
-                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars into-df | polars as-date "%Y-%m-%d" --not-exact"#,
+                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars_dyn into-df | polars_dyn as-date "%Y-%m-%d" --not-exact"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -140,7 +140,7 @@ impl PluginCommand for AsDate {
             },
             Example {
                 description: "Converts string to date in an expression",
-                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars into-lazy | polars select (polars col 0 | polars as-date "%Y-%m-%d" --not-exact)"#,
+                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars_dyn into-lazy | polars_dyn select (polars_dyn col 0 | polars_dyn as-date "%Y-%m-%d" --not-exact)"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -177,7 +177,7 @@ impl PluginCommand for AsDate {
             },
             Example {
                 description: "Output is of date type",
-                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars into-df | polars as-date "%Y-%m-%d" --not-exact | polars schema"#,
+                example: r#"["2021-12-30" "2021-12-31 21:00:00"] | polars_dyn into-df | polars_dyn as-date "%Y-%m-%d" --not-exact | polars_dyn schema"#,
                 result: Some(Value::record(
                     record! {
                         "date" => Value::string("date", Span::test_data()),

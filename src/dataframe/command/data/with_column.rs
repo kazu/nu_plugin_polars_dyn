@@ -18,7 +18,7 @@ impl PluginCommand for WithColumn {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars with-column"
+        "polars_dyn with-column"
     }
 
     fn description(&self) -> &str {
@@ -27,7 +27,7 @@ impl PluginCommand for WithColumn {
 
     fn signature(&self) -> Signature {
         Signature::build(self.name())
-            .named("name", SyntaxShape::String, "New column name. For lazy dataframes and expressions syntax, use a `polars as` expression to name a column.", Some('n'))
+            .named("name", SyntaxShape::String, "New column name. For lazy dataframes and expressions syntax, use a `polars_dyn as` expression to name a column.", Some('n'))
             .rest(
                 "series or expressions",
                 SyntaxShape::Any,
@@ -51,8 +51,8 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Adds a series to the dataframe",
                 example: r#"[[a b]; [1 2] [3 4]]
-    | polars into-df
-    | polars with-column ([5 6] | polars into-df) --name c"#,
+    | polars_dyn into-df
+    | polars_dyn with-column ([5 6] | polars_dyn into-df) --name c"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -79,12 +79,12 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Adds a series to the dataframe",
                 example: r#"[[a b]; [1 2] [3 4]]
-    | polars into-lazy
-    | polars with-column [
-        ((polars col a) * 2 | polars as "c")
-        ((polars col a) * 3 | polars as "d")
+    | polars_dyn into-lazy
+    | polars_dyn with-column [
+        ((polars_dyn col a) * 2 | polars_dyn as "c")
+        ((polars_dyn col a) * 3 | polars_dyn as "d")
       ]
-    | polars collect"#,
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -115,12 +115,12 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Add series to a lazyframe using a record",
                 example: r#"[[a b]; [1 2] [3 4]]
-    | polars into-lazy
-    | polars with-column {
-        c: ((polars col a) * 2)
-        d: ((polars col a) * 3)
+    | polars_dyn into-lazy
+    | polars_dyn with-column {
+        c: ((polars_dyn col a) * 2)
+        d: ((polars_dyn col a) * 3)
       }
-    | polars collect"#,
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -151,12 +151,12 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Add series to a dataframe using a record",
                 example: r#"[[a b]; [1 2] [3 4]]
-    | polars into-df
-    | polars with-column {
-        c: ((polars col a) * 2)
-        d: ((polars col a) * 3)
+    | polars_dyn into-df
+    | polars_dyn with-column {
+        c: ((polars_dyn col a) * 2)
+        d: ((polars_dyn col a) * 3)
       }
-    | polars collect"#,
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -187,9 +187,9 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Add columns using a selector to multiply all columns by 2",
                 example: r#"[[a b]; [1 2] [3 4]]
-    | polars into-df
-    | polars with-column ((polars selector all) * 2)
-    | polars collect"#,
+    | polars_dyn into-df
+    | polars_dyn with-column ((polars_dyn selector all) * 2)
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -212,9 +212,9 @@ impl PluginCommand for WithColumn {
             Example {
                 description: "Add a new column using a selector on the first column",
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-    | polars into-df
-    | polars with-column ((polars selector first) * 10 | polars as a_times_10)
-    | polars collect"#,
+    | polars_dyn into-df
+    | polars_dyn with-column ((polars_dyn selector first) * 10 | polars_dyn as a_times_10)
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -282,11 +282,11 @@ fn command_eager(
         if let Some(name) = call.get_flag::<Spanned<String>>("name")? {
             return Err(ShellError::Generic(
                 GenericError::new(
-                    "Flag 'name' is unsupported when used with expressions. Please use the `polars as` expression to name a column",
+                    "Flag 'name' is unsupported when used with expressions. Please use the `polars_dyn as` expression to name a column",
                     "",
                     name.span,
                 )
-                .with_help("Use a `polars as` expression to name a column"),
+                .with_help("Use a `polars_dyn as` expression to name a column"),
             ));
         }
         let vals: Vec<Value> = call.rest(0)?;
@@ -329,11 +329,11 @@ fn command_lazy(
     if let Some(name) = call.get_flag::<Spanned<String>>("name")? {
         return Err(ShellError::Generic(
             GenericError::new(
-                "Flag 'name' is unsupported for lazy dataframes. Please use the `polars as` expression to name a column",
+                "Flag 'name' is unsupported for lazy dataframes. Please use the `polars_dyn as` expression to name a column",
                 "",
                 name.span,
             )
-            .with_help("Use a `polars as` expression to name a column"),
+            .with_help("Use a `polars_dyn as` expression to name a column"),
         ));
     }
 

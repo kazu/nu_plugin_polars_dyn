@@ -18,7 +18,7 @@ impl PluginCommand for SelectorStartsWith {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector starts-with"
+        "polars_dyn selector starts-with"
     }
 
     fn description(&self) -> &str {
@@ -45,10 +45,10 @@ impl PluginCommand for SelectorStartsWith {
         "baz": [5, 6],
         "zap": [7, 8],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector starts-with b) |
-    polars sort-by bar baz |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector starts-with b) |
+    polars_dyn sort-by bar baz |
+    polars_dyn collect"#,
                 description: "Match columns starting with a 'b'",
                 result: Some(
                     NuDataFrame::from(
@@ -68,10 +68,10 @@ impl PluginCommand for SelectorStartsWith {
         "baz": [5, 6],
         "zap": [7, 8],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector starts-with b z) |
-    polars sort-by bar baz zap |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector starts-with b z) |
+    polars_dyn sort-by bar baz zap |
+    polars_dyn collect"#,
                 description: "Match columns starting with *either* the letter 'b' or 'z'",
                 result: Some(
                     NuDataFrame::from(

@@ -19,7 +19,7 @@ impl PluginCommand for LazyExplode {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars explode"
+        "polars_dyn explode"
     }
 
     fn description(&self) -> &str {
@@ -62,10 +62,10 @@ impl PluginCommand for LazyExplode {
                 description: "Explode the specified dataframe",
                 example:
                     "[[id name hobbies]; [1 Mercy [Cycling Knitting]] [2 Bob [Skiing Football]]] 
-                    | polars into-df 
-                    | polars explode hobbies 
-                    | polars collect
-                    | polars sort-by [id, name]",
+                    | polars_dyn into-df 
+                    | polars_dyn explode hobbies 
+                    | polars_dyn collect
+                    | polars_dyn sort-by [id, name]",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -106,7 +106,7 @@ impl PluginCommand for LazyExplode {
             },
             Example {
                 description: "Select a column and explode the values",
-                example: "[[id name hobbies]; [1 Mercy [Cycling Knitting]] [2 Bob [Skiing Football]]] | polars into-df | polars select (polars col hobbies | polars explode)",
+                example: "[[id name hobbies]; [1 Mercy [Cycling Knitting]] [2 Bob [Skiing Football]]] | polars_dyn into-df | polars_dyn select (polars_dyn col hobbies | polars_dyn explode)",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

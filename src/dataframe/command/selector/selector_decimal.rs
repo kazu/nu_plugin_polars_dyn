@@ -14,7 +14,7 @@ impl PluginCommand for SelectorDecimal {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector decimal"
+        "polars_dyn selector decimal"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorDecimal {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector decimal",
+            example: "polars_dyn selector decimal",
             description: "Create a selector for decimal columns",
             result: None,
         }]

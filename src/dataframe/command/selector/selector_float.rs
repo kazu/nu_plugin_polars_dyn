@@ -16,7 +16,7 @@ impl PluginCommand for SelectorFloat {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector float"
+        "polars_dyn selector float"
     }
 
     fn description(&self) -> &str {
@@ -37,10 +37,10 @@ impl PluginCommand for SelectorFloat {
         "baz": [2.0, 5.5],
         "qux": [3.1, 2.7],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector float) |
-    polars sort-by baz qux |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector float) |
+    polars_dyn sort-by baz qux |
+    polars_dyn collect"#,
             description: "Select all float columns",
             result: Some(
                 NuDataFrame::from(

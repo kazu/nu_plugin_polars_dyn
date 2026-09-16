@@ -19,7 +19,7 @@ impl PluginCommand for IsUnique {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars is-unique"
+        "polars_dyn is-unique"
     }
 
     fn description(&self) -> &str {
@@ -45,7 +45,7 @@ impl PluginCommand for IsUnique {
         vec![
             Example {
                 description: "Create mask indicating unique values",
-                example: "[5 6 6 6 8 8 8] | polars into-df | polars is-unique",
+                example: "[5 6 6 6 8 8 8] | polars_dyn into-df | polars_dyn is-unique",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -69,7 +69,7 @@ impl PluginCommand for IsUnique {
             },
             Example {
                 description: "Create mask indicating duplicated rows in a dataframe",
-                example: "[[a, b]; [1 2] [1 2] [3 3] [3 3] [1 1]] | polars into-df | polars is-unique",
+                example: "[[a, b]; [1 2] [1 2] [3 3] [3 3] [1 1]] | polars_dyn into-df | polars_dyn is-unique",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

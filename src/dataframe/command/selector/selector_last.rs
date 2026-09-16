@@ -17,7 +17,7 @@ impl PluginCommand for SelectorLast {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector last"
+        "polars_dyn selector last"
     }
 
     fn description(&self) -> &str {
@@ -39,20 +39,20 @@ impl PluginCommand for SelectorLast {
         vec![
             Example {
                 description: "Create a selector for the last column",
-                example: "polars selector last",
+                example: "polars_dyn selector last",
                 result: None,
             },
             Example {
                 description: "Create a selector for the last 3 columns",
-                example: "polars selector last 3",
+                example: "polars_dyn selector last 3",
                 result: None,
             },
             Example {
                 description: "Create a new column from the last column using with-column",
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-                    | polars into-df
-                    | polars with-column ((polars selector last) * 100 | polars as c_times_100)
-                    | polars collect"#,
+                    | polars_dyn into-df
+                    | polars_dyn with-column ((polars_dyn selector last) * 100 | polars_dyn as c_times_100)
+                    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

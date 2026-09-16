@@ -16,7 +16,7 @@ impl PluginCommand for ToLazyGroupBy {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars group-by"
+        "polars_dyn group-by"
     }
 
     fn description(&self) -> &str {
@@ -52,15 +52,15 @@ impl PluginCommand for ToLazyGroupBy {
             Example {
                 description: "Group by and perform an aggregation",
                 example: r#"[[a b]; [1 2] [1 4] [2 6] [2 4]]
-    | polars into-lazy
-    | polars group-by a
-    | polars agg [
-        (polars col b | polars min | polars as "b_min")
-        (polars col b | polars max | polars as "b_max")
-        (polars col b | polars sum | polars as "b_sum")
+    | polars_dyn into-lazy
+    | polars_dyn group-by a
+    | polars_dyn agg [
+        (polars_dyn col b | polars_dyn min | polars_dyn as "b_min")
+        (polars_dyn col b | polars_dyn max | polars_dyn as "b_max")
+        (polars_dyn col b | polars_dyn sum | polars_dyn as "b_sum")
      ]
-    | polars collect
-    | polars sort-by a"#,
+    | polars_dyn collect
+    | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(
@@ -77,15 +77,15 @@ impl PluginCommand for ToLazyGroupBy {
             Example {
                 description: "Group by an expression and perform an aggregation",
                 example: r#"[[a b]; [2025-04-01 1] [2025-04-02 2] [2025-04-03 3] [2025-04-04 4]]
-    | polars into-lazy
-    | polars group-by (polars col a | polars get-day | $in mod 2)
-    | polars agg [
-        (polars col b | polars min | polars as "b_min")
-        (polars col b | polars max | polars as "b_max")
-        (polars col b | polars sum | polars as "b_sum")
+    | polars_dyn into-lazy
+    | polars_dyn group-by (polars_dyn col a | polars_dyn get-day | $in mod 2)
+    | polars_dyn agg [
+        (polars_dyn col b | polars_dyn min | polars_dyn as "b_min")
+        (polars_dyn col b | polars_dyn max | polars_dyn as "b_max")
+        (polars_dyn col b | polars_dyn sum | polars_dyn as "b_sum")
      ]
-    | polars collect
-    | polars sort-by a"#,
+    | polars_dyn collect
+    | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(

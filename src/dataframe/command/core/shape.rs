@@ -14,7 +14,7 @@ impl PluginCommand for ShapeDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars shape"
+        "polars_dyn shape"
     }
 
     fn description(&self) -> &str {
@@ -39,7 +39,7 @@ impl PluginCommand for ShapeDF {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Shows row and column shape",
-            example: "[[a b]; [1 2] [3 4]] | polars into-df | polars shape",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn shape",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

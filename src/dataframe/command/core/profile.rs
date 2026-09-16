@@ -18,7 +18,7 @@ impl PluginCommand for ProfileDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars profile"
+        "polars_dyn profile"
     }
 
     fn signature(&self) -> Signature {
@@ -50,14 +50,14 @@ The units of the timings are microseconds."#
         vec![Example {
             description: "Profile a lazy dataframe",
             example: r#"[[a b]; [1 2] [1 4] [2 6] [2 4]]
-    | polars into-lazy
-    | polars group-by a
-    | polars agg [
-        (polars col b | polars min | polars as "b_min")
-        (polars col b | polars max | polars as "b_max")
-        (polars col b | polars sum | polars as "b_sum")
+    | polars_dyn into-lazy
+    | polars_dyn group-by a
+    | polars_dyn agg [
+        (polars_dyn col b | polars_dyn min | polars_dyn as "b_min")
+        (polars_dyn col b | polars_dyn max | polars_dyn as "b_max")
+        (polars_dyn col b | polars_dyn sum | polars_dyn as "b_sum")
      ]
-    | polars profile
+    | polars_dyn profile
 "#,
             result: None,
         }]

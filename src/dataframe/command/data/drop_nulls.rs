@@ -17,7 +17,7 @@ impl PluginCommand for DropNulls {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars drop-nulls"
+        "polars_dyn drop-nulls"
     }
 
     fn description(&self) -> &str {
@@ -48,10 +48,10 @@ impl PluginCommand for DropNulls {
         vec![
             Example {
                 description: "drop null values in dataframe",
-                example: r#"let df = ([[a b]; [1 2] [3 0] [1 2]] | polars into-df);
+                example: r#"let df = ([[a b]; [1 2] [3 0] [1 2]] | polars_dyn into-df);
     let res = ($df.b / $df.b);
-    let a = ($df | polars with-column $res --name res);
-    $a | polars drop-nulls"#,
+    let a = ($df | polars_dyn with-column $res --name res);
+    $a | polars_dyn drop-nulls"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -77,8 +77,8 @@ impl PluginCommand for DropNulls {
             },
             Example {
                 description: "drop null values in dataframe",
-                example: r#"let s = ([1 2 0 0 3 4] | polars into-df);
-    ($s / $s) | polars drop-nulls"#,
+                example: r#"let s = ([1 2 0 0 3 4] | polars_dyn into-df);
+    ($s / $s) | polars_dyn drop-nulls"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

@@ -21,7 +21,7 @@ impl PluginCommand for GetYear {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get-year"
+        "polars_dyn get-year"
     }
 
     fn description(&self) -> &str {
@@ -56,8 +56,8 @@ impl PluginCommand for GetYear {
             Example {
                 description: "Returns year from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars get-year"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn get-year"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[2020i32, 2020]),
@@ -70,8 +70,8 @@ impl PluginCommand for GetYear {
             Example {
                 description: "Returns year from a date in an expression",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars select (polars col 0 | polars get-year)"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn col 0 | polars_dyn get-year)"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[2020i32, 2020]),

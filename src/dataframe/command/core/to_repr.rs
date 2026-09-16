@@ -17,7 +17,7 @@ impl PluginCommand for ToRepr {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars into-repr"
+        "polars_dyn into-repr"
     }
 
     fn description(&self) -> &str {
@@ -37,7 +37,7 @@ impl PluginCommand for ToRepr {
         vec![
             Example {
                 description: "Shows dataframe in repr format",
-                example: "[[a b]; [2025-01-01 2] [2025-01-02 4]] | polars into-df | polars into-repr",
+                example: "[[a b]; [2025-01-01 2] [2025-01-02 4]] | polars_dyn into-df | polars_dyn into-repr",
                 result: Some(Value::string(
                     r#"
 shape: (2, 2)
@@ -55,7 +55,7 @@ shape: (2, 2)
             },
             Example {
                 description: "Shows lazy dataframe in repr format",
-                example: "[[a b]; [2025-01-01 2] [2025-01-02 4]] | polars into-lazy | polars into-repr",
+                example: "[[a b]; [2025-01-01 2] [2025-01-02 4]] | polars_dyn into-lazy | polars_dyn into-repr",
                 result: Some(Value::string(
                     r#"
 shape: (2, 2)

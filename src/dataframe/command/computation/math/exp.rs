@@ -12,7 +12,7 @@ impl PluginCommand for ExprMathExp {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math exp"
+        "polars_dyn math exp"
     }
 
     fn description(&self) -> &str {
@@ -38,9 +38,9 @@ impl PluginCommand for ExprMathExp {
         vec![Example {
             description: "Compute element-wise e raised to the power of a column",
             example: "[[a]; [0] [1] [2]] | 
-    polars into-df | 
-    polars select (polars col a | polars math exp) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math exp) | 
+    polars_dyn collect",
             result: None,
         }]
     }

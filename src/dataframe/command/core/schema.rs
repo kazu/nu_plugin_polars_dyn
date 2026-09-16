@@ -16,7 +16,7 @@ impl PluginCommand for SchemaCmd {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars schema"
+        "polars_dyn schema"
     }
 
     fn description(&self) -> &str {
@@ -33,7 +33,7 @@ impl PluginCommand for SchemaCmd {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Dataframe schema",
-            example: r#"[[a b]; [1 "foo"] [3 "bar"]] | polars into-df | polars schema"#,
+            example: r#"[[a b]; [1 "foo"] [3 "bar"]] | polars_dyn into-df | polars_dyn schema"#,
             result: Some(Value::record(
                 record! {
                     "a" => Value::string("i64", Span::test_data()),

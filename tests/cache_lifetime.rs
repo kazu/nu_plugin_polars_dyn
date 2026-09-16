@@ -1,4 +1,4 @@
-//! Cached values stay alive until `polars store-rm` or the end of the plugin process.
+//! Cached values stay alive until `polars_dyn store-rm` or the end of the plugin process.
 //! Runs the `nu` on `PATH` against the built plugin binary.
 
 use std::process::Command;
@@ -27,9 +27,9 @@ fn run_nu(script: &str) -> String {
 #[test]
 fn lazyframe_in_a_variable_collects_later() {
     let out = run_nu(
-        "let lf = ([[a b];[1 2] [3 4]] | polars into-lazy); \
-         $lf | polars select a | ignore; \
-         $lf | polars collect | polars into-nu | to nuon",
+        "let lf = ([[a b];[1 2] [3 4]] | polars_dyn into-lazy); \
+         $lf | polars_dyn select a | ignore; \
+         $lf | polars_dyn collect | polars_dyn into-nu | to nuon",
     );
     assert_eq!(out.trim(), "[[a, b]; [1, 2], [3, 4]]");
 }
@@ -37,9 +37,9 @@ fn lazyframe_in_a_variable_collects_later() {
 #[test]
 fn dataframe_survives_a_dropped_copy_with_the_same_id() {
     let out = run_nu(
-        "let df = ([[a b];[1 2] [3 4]] | polars into-df); \
-         $df | polars into-df | ignore; \
-         $df | polars into-nu | to nuon",
+        "let df = ([[a b];[1 2] [3 4]] | polars_dyn into-df); \
+         $df | polars_dyn into-df | ignore; \
+         $df | polars_dyn into-nu | to nuon",
     );
     assert_eq!(out.trim(), "[[a, b]; [1, 2], [3, 4]]");
 }
@@ -47,9 +47,9 @@ fn dataframe_survives_a_dropped_copy_with_the_same_id() {
 #[test]
 fn store_rm_removes_the_value() {
     let out = run_nu(
-        "let df = ([[a b];[1 2] [3 4]] | polars into-df); \
-         polars store-ls | get key | first | polars store-rm $in | ignore; \
-         polars store-ls | length",
+        "let df = ([[a b];[1 2] [3 4]] | polars_dyn into-df); \
+         polars_dyn store-ls | get key | first | polars_dyn store-rm $in | ignore; \
+         polars_dyn store-ls | length",
     );
     assert_eq!(out.trim(), "0");
 }
