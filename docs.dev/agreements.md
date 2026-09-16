@@ -194,6 +194,29 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 - 本家のソース内テスト(`#[cfg(test)]`)。移す手間は差分を増やすだけ。fork で新しく書く
   テストだけ `tests/` に置く。
 
+## 将来: seekzstdsep を圧縮層として挟む
+
+polars は csv / ndjson の圧縮ファイルを全体展開してからしか読めない(seek 不可、展開は単一
+スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。logfmt の結線
+(task 007)が終わってから、次の 3 段で進める。
+
+1. **seekzstdsep 側**に汎用の `AnonymousScan` を作る。frame index、`n_rows` / slice → frame
+   範囲の写像、frame ごとの展開、rayon の frame 並列、chunk の連結を持つ。パーサは
+   「1 frame の `&[u8]` と `with_columns` → `DataFrame`」と「schema」の 2 関数を注入する
+   (frame 境界 = レコード境界なので、パーサは frame をまたぐ状態を持たない)。入力は
+   `Read + Seek` の trait object で、ssh の VFS はこの層の下に置く。polars に依存するので
+   `seekzstdsep` 本体(publish 済、polars 非依存)ではなく**隣の別 crate**にする。
+   predicate pushdown は後から frame の DataFrame に `Expr` を当てる形で足せる。
+2. **logfmt 側**は行パーサ・schema 推論・`line_filter` だけを残し、`LazyLogFmtReader` /
+   `LogFmtReaderState` / `next_batch` / 並列化と `AnonymousScan` 実装を消す。
+3. **fork 側**は registry の `.csv.zstsep` / `.ndjson.zstsep` / `.logfmt.zstsep` を 1 つの
+   `ScanSource` に登録し、残りの接尾辞でパーサを選ぶ。csv / ndjson のパーサは polars 標準の
+   reader を `Cursor` に当てるだけ。
+
+未決: 非圧縮ファイル(素の `.log`、ssh 越しの plain)を frame 走査に乗せるか
+(改行で切った固定長 window を frame と見なす入力実装を足す)、zstsep に変換してから読むことに
+するか。kazu の運用で決める。
+
 ## 作業の進め方
 
 - 作業はこの repo をカレントにした別プロジェクト(別セッション)で行う。
@@ -204,4 +227,5 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 ## 未決の論点
 
-なし。実装時に確認する事項は各節に「実装時に確認」「未検証」として残している。
+実装に入る範囲では無し。実装時に確認する事項は各節に「実装時に確認」「未検証」として残している。
+「将来: seekzstdsep を圧縮層として挟む」の非圧縮ファイルの扱いだけが未決で、着手時に決める。
