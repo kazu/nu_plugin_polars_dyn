@@ -1,4 +1,4 @@
-//! `polars_dyn open` on the dev bin reads `.logfmt` and `.logfmt.zst` through the `logfmt`
+//! `polars_dyn open` on the dev bin reads `.logfmt` and `.logfmt.seek.zst` through the `logfmt`
 //! source. Runs the `nu` on `PATH` against the built dev bin.
 
 use std::{
@@ -63,9 +63,9 @@ fn opens_logfmt() {
 }
 
 #[test]
-fn opens_logfmt_zst() {
+fn opens_logfmt_seek_zst() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let path = dir.path().join("app.logfmt.zst");
+    let path = dir.path().join("app.logfmt.seek.zst");
     let mut out = File::create(&path).expect("create fixture");
     seekzstdsep::convert_text_to_seekable_zst_reader(LINES.as_bytes(), &mut out, 65536, b"\n")
         .expect("seekable zst fixture");
