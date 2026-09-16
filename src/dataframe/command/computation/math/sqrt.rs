@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathSqrt {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math sqrt"
+        "polars_dyn math sqrt"
     }
 
     fn description(&self) -> &str {
@@ -39,7 +39,7 @@ impl PluginCommand for ExprMathSqrt {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Compute the element-wise square root of a column",
-            example: "[[a]; [0] [1] [4] [9] [16]] | polars into-df | polars select (polars col a | polars math sqrt) | polars collect",
+            example: "[[a]; [0] [1] [4] [9] [16]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn math sqrt) | polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a" => [0.0f64, 1.0f64, 2.0f64, 3.0f64, 4.0f64])

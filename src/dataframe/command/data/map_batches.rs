@@ -23,7 +23,7 @@ impl PluginCommand for MapBatches {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars map-batches"
+        "polars_dyn map-batches"
     }
 
     fn description(&self) -> &str {
@@ -35,7 +35,7 @@ impl PluginCommand for MapBatches {
         and must return a value that can be converted to a series — a single-column \
         dataframe, a list, or a scalar. The result is returned as a single-column \
         dataframe. The closure is invoked once with all columns at the time \
-        `polars map-batches` is run."
+        `polars_dyn map-batches` is run."
     }
 
     fn signature(&self) -> Signature {
@@ -80,8 +80,8 @@ impl PluginCommand for MapBatches {
             Example {
                 description: "Return a constant series from a closure",
                 example: r#"[[a b]; [1 4] [2 5] [3 6]]
-    | polars into-df
-    | polars map-batches --name out { |_cols| [10 20 30] } a"#,
+    | polars_dyn into-df
+    | polars_dyn map-batches --name out { |_cols| [10 20 30] } a"#,
                 result: Some(
                     NuDataFrame::new(
                         false,
@@ -96,17 +96,17 @@ impl PluginCommand for MapBatches {
             Example {
                 description: "Double the values of column `a` via a Nushell closure",
                 example: r#"[[a b]; [1 4] [2 5] [3 6]]
-    | polars into-df
-    | polars map-batches { |cols| $cols | first | polars get a | each { |v| $v * 2 } } a"#,
+    | polars_dyn into-df
+    | polars_dyn map-batches { |cols| $cols | first | polars_dyn get a | each { |v| $v * 2 } } a"#,
                 result: None,
             },
             Example {
                 description: "Sum two columns element-wise and rename the result",
                 example: r#"[[a b]; [1 4] [2 5] [3 6]]
-    | polars into-df
-    | polars map-batches --name a_plus_b { |cols|
-        let a = $cols | get 0 | polars get a
-        let b = $cols | get 1 | polars get b
+    | polars_dyn into-df
+    | polars_dyn map-batches --name a_plus_b { |cols|
+        let a = $cols | get 0 | polars_dyn get a
+        let b = $cols | get 1 | polars_dyn get b
         $a | zip $b | each { |pair| $pair.0 + $pair.1 }
       } a b"#,
                 result: Some(
@@ -155,7 +155,7 @@ impl PluginCommand for MapBatches {
 
         let result_value = engine
             .eval_closure(&closure, vec![inputs], None)
-            .inspect_err(|e| eprintln!("Error evaluating closure in polars map-batches: {e}"))
+            .inspect_err(|e| eprintln!("Error evaluating closure in polars_dyn map-batches: {e}"))
             .map_err(LabeledError::from)?;
 
         let mut result_series = value_to_series(plugin, result_value, call.head)?;

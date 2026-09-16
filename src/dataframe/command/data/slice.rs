@@ -14,7 +14,7 @@ impl PluginCommand for SliceDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars slice"
+        "polars_dyn slice"
     }
 
     fn description(&self) -> &str {
@@ -42,7 +42,7 @@ impl PluginCommand for SliceDF {
         vec![
             Example {
                 description: "Create new dataframe from a slice of the rows",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars slice 0 1",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn slice 0 1",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -58,7 +58,7 @@ impl PluginCommand for SliceDF {
             },
             Example {
                 description: "Create a new lazy dataframe from a slice of a lazy dataframe's rows",
-                example: "[[a b]; [1 2] [3 4]] | polars into-lazy | polars slice 0 1 | describe",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-lazy | polars_dyn slice 0 1 | describe",
                 result: Some(Value::test_string("polars_lazyframe")),
             },
         ]

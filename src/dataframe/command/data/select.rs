@@ -15,7 +15,7 @@ impl PluginCommand for LazySelect {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars select"
+        "polars_dyn select"
     }
 
     fn description(&self) -> &str {
@@ -46,7 +46,7 @@ impl PluginCommand for LazySelect {
         vec![
             Example {
                 description: "Select a column from the dataframe",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars select a",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn select a",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -62,7 +62,7 @@ impl PluginCommand for LazySelect {
             },
             Example {
                 description: "Select a column from a dataframe using a record",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars select {c: ((polars col a) * 2)}",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn select {c: ((polars_dyn col a) * 2)}",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -78,7 +78,7 @@ impl PluginCommand for LazySelect {
             },
             Example {
                 description: "Select a column from a dataframe using a mix of expressions and record of expressions",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars select a b {c: ((polars col a) ** 2)}",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn select a b {c: ((polars_dyn col a) ** 2)}",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -104,7 +104,7 @@ impl PluginCommand for LazySelect {
             },
             Example {
                 description: "Select all columns from a dataframe using a selector",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars select (polars selector all)",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn select (polars_dyn selector all)",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -126,7 +126,7 @@ impl PluginCommand for LazySelect {
             },
             Example {
                 description: "Select columns by name using a selector",
-                example: "[[a b c]; [1 2 3] [4 5 6]] | polars into-df | polars select (polars selector by-name a c)",
+                example: "[[a b c]; [1 2 3] [4 5 6]] | polars_dyn into-df | polars_dyn select (polars_dyn selector by-name a c)",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -148,7 +148,7 @@ impl PluginCommand for LazySelect {
             },
             Example {
                 description: "Select the first column using a selector",
-                example: "[[a b c]; [1 2 3] [4 5 6]] | polars into-df | polars select (polars selector first)",
+                example: "[[a b c]; [1 2 3] [4 5 6]] | polars_dyn into-df | polars_dyn select (polars_dyn selector first)",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

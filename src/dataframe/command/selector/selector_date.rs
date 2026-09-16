@@ -14,7 +14,7 @@ impl PluginCommand for SelectorDate {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector date"
+        "polars_dyn selector date"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorDate {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector date",
+            example: "polars_dyn selector date",
             description: "Create a selector for date columns",
             result: None,
         }]

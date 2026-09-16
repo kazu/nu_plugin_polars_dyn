@@ -14,7 +14,7 @@ impl PluginCommand for SelectorList {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector list"
+        "polars_dyn selector list"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorList {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector list",
+            example: "polars_dyn selector list",
             description: "Create a selector for list columns",
             result: None,
         }]

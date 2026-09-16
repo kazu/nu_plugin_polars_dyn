@@ -14,7 +14,7 @@ impl PluginCommand for SelectorNested {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector nested"
+        "polars_dyn selector nested"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorNested {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector nested",
+            example: "polars_dyn selector nested",
             description: "Create a selector for nested columns (list, array, or struct)",
             result: None,
         }]

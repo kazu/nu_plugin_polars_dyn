@@ -22,7 +22,7 @@ impl PluginCommand for SetWithIndex {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars set-with-idx"
+        "polars_dyn set-with-idx"
     }
 
     fn description(&self) -> &str {
@@ -54,9 +54,9 @@ impl PluginCommand for SetWithIndex {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Set value in selected rows from series",
-            example: r#"let series = ([4 1 5 2 4 3] | polars into-df);
-    let indices = ([0 2] | polars into-df);
-    $series | polars set-with-idx 6 --indices $indices"#,
+            example: r#"let series = ([4 1 5 2 4 3] | polars_dyn into-df);
+    let indices = ([0 2] | polars_dyn into-df);
+    $series | polars_dyn set-with-idx 6 --indices $indices"#,
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

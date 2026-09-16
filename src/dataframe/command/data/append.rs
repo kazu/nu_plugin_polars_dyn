@@ -42,7 +42,7 @@ impl PluginCommand for AppendDF {
     }
 
     fn name(&self) -> &str {
-        "polars append"
+        "polars_dyn append"
     }
 
     fn description(&self) -> &str {
@@ -53,8 +53,8 @@ impl PluginCommand for AppendDF {
         vec![
             Example {
                 description: "Appends a dataframe as new columns",
-                example: r#"let a = ([[a b]; [1 2] [3 4]] | polars into-df);
-    $a | polars append $a"#,
+                example: r#"let a = ([[a b]; [1 2] [3 4]] | polars_dyn into-df);
+    $a | polars_dyn append $a"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -84,7 +84,7 @@ impl PluginCommand for AppendDF {
             },
             Example {
                 description: "Appends a dataframe merging at the end of columns",
-                example: r#"let a = ([[a b]; [1 2] [3 4]] | polars into-df); $a | polars append $a --col"#,
+                example: r#"let a = ([[a b]; [1 2] [3 4]] | polars_dyn into-df); $a | polars_dyn append $a --col"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

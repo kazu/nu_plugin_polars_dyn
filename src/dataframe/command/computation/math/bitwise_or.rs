@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathBitwiseOr {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math bitwise-or"
+        "polars_dyn math bitwise-or"
     }
 
     fn description(&self) -> &str {
@@ -44,9 +44,9 @@ impl PluginCommand for ExprMathBitwiseOr {
         vec![Example {
             description: "Perform an aggregation of bitwise ORs",
             example: "[[n]; [-1] [-0] [-1]] | 
-    polars into-df | 
-    polars select (polars col n | polars math bitwise-or | polars as n) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col n | polars_dyn math bitwise-or | polars_dyn as n) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!(

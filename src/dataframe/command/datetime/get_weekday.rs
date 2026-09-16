@@ -21,7 +21,7 @@ impl PluginCommand for GetWeekDay {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get-weekday"
+        "polars_dyn get-weekday"
     }
 
     fn description(&self) -> &str {
@@ -56,8 +56,8 @@ impl PluginCommand for GetWeekDay {
             Example {
                 description: "Returns weekday from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars get-weekday"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn get-weekday"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[2i8, 2]),
@@ -70,8 +70,8 @@ impl PluginCommand for GetWeekDay {
             Example {
                 description: "Returns weekday from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars select (polars col 0 | polars get-weekday)"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn col 0 | polars_dyn get-weekday)"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[2i8, 2]),

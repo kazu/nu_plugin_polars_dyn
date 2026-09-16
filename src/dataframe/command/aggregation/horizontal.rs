@@ -51,7 +51,7 @@ impl PluginCommand for Horizontal {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars horizontal"
+        "polars_dyn horizontal"
     }
 
     fn description(&self) -> &str {
@@ -84,9 +84,9 @@ impl PluginCommand for Horizontal {
             Example {
                 description: "Horizontal sum across two columns (ignore nulls by default)",
                 example: "[[a b]; [1 2] [2 3] [3 4] [4 5] [5 null]]
-                    | polars into-df
-                    | polars select (polars horizontal sum a b)
-                    | polars collect",
+                    | polars_dyn into-df
+                    | polars_dyn select (polars_dyn horizontal sum a b)
+                    | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -109,9 +109,9 @@ impl PluginCommand for Horizontal {
             Example {
                 description: "Horizontal sum across two columns while accounting for nulls",
                 example: "[[a b]; [1 2] [2 3] [3 4] [4 5] [5 null]]
-                    | polars into-df
-                    | polars select (polars horizontal sum a b --nulls)
-                    | polars collect",
+                    | polars_dyn into-df
+                    | polars_dyn select (polars_dyn horizontal sum a b --nulls)
+                    | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

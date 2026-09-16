@@ -18,7 +18,7 @@ impl PluginCommand for Replace {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars replace"
+        "polars_dyn replace"
     }
 
     fn description(&self) -> &str {
@@ -72,9 +72,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values of same type",
                 example: "[[a]; [1] [1] [2] [2]]
-                | polars into-df
-                | polars select (polars col a | polars replace [1 2] [10 20])
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace [1 2] [10 20])
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => [10, 10, 20, 20])
@@ -86,9 +86,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values of another type",
                 example: "[[a]; [1] [1] [2] [2]]
-                | polars into-df
-                | polars select (polars col a | polars replace [1 2] [a b] --strict)
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace [1 2] [a b] --strict)
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => ["a", "a", "b", "b"])
@@ -100,9 +100,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values based on expressions (cannot be used with strict)",
                 example: "[[a]; [1] [1] [2] [2]]
-                | polars into-df
-                | polars select (polars col a | polars replace [(polars col a | polars max)] [(polars col a | polars max | $in + 5)])
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace [(polars_dyn col a | polars_dyn max)] [(polars_dyn col a | polars_dyn max | $in + 5)])
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => [1, 1, 7, 7])
@@ -114,9 +114,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values based on expressions with default",
                 example: "[[a]; [1] [1] [2] [3]]
-                | polars into-df
-                | polars select (polars col a | polars replace [1] [10] --default (polars col a | polars max | $in * 100) --strict)
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace [1] [10] --default (polars_dyn col a | polars_dyn max | $in * 100) --strict)
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => [10, 10, 300, 300])
@@ -128,9 +128,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values based on expressions with default",
                 example: "[[a]; [1] [1] [2] [3]]
-                | polars into-df
-                | polars select (polars col a | polars replace [1] [10] --default (polars col a | polars max | $in * 100) --strict --return-dtype str)
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace [1] [10] --default (polars_dyn col a | polars_dyn max | $in * 100) --strict --return-dtype str)
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => ["10", "10", "300", "300"])
@@ -142,9 +142,9 @@ impl PluginCommand for Replace {
             Example {
                 description: "Replace column with different values using a record",
                 example: "[[a]; [1] [1] [2] [2]]
-                | polars into-df
-                | polars select (polars col a | polars replace {1: a, 2: b} --default c --strict --return-dtype str)
-                | polars collect",
+                | polars_dyn into-df
+                | polars_dyn select (polars_dyn col a | polars_dyn replace {1: a, 2: b} --default c --strict --return-dtype str)
+                | polars_dyn collect",
                 result: Some(
                     NuDataFrame::from(
                         df!("a" => ["a", "a", "b", "b"])

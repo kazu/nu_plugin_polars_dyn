@@ -23,7 +23,7 @@ impl PluginCommand for GetHour {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars get-hour"
+        "polars_dyn get-hour"
     }
 
     fn description(&self) -> &str {
@@ -58,8 +58,8 @@ impl PluginCommand for GetHour {
             Example {
                 description: "Returns hour from a date",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars get-hour"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn get-hour"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[16i8, 16]),
@@ -72,8 +72,8 @@ impl PluginCommand for GetHour {
             Example {
                 description: "Returns hour from a date in a lazyframe",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-lazy);
-    $df | polars get-hour"#,
+    let df = ([$dt $dt] | polars_dyn into-lazy);
+    $df | polars_dyn get-hour"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[16i8, 16]),
@@ -86,8 +86,8 @@ impl PluginCommand for GetHour {
             Example {
                 description: "Returns hour from a date in an expression",
                 example: r#"let dt = ('2020-08-04T16:39:18+00:00' | into datetime --timezone 'UTC');
-    let df = ([$dt $dt] | polars into-df);
-    $df | polars select (polars col 0 | polars get-hour)"#,
+    let df = ([$dt $dt] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn col 0 | polars_dyn get-hour)"#,
                 result: Some(
                     NuDataFrame::try_from_series(
                         Series::new("0".into(), &[16i8, 16]),

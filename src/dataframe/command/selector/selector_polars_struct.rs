@@ -14,7 +14,7 @@ impl PluginCommand for SelectorPolarsStruct {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector struct"
+        "polars_dyn selector struct"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorPolarsStruct {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector struct",
+            example: "polars_dyn selector struct",
             description: "Create a selector for struct columns",
             result: None,
         }]

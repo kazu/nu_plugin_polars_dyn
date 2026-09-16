@@ -21,7 +21,7 @@ impl PluginCommand for ToLowerCase {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars lowercase"
+        "polars_dyn lowercase"
     }
 
     fn description(&self) -> &str {
@@ -55,7 +55,7 @@ impl PluginCommand for ToLowerCase {
         vec![
             Example {
                 description: "Modifies strings in a column to lowercase",
-                example: "[[a]; [Abc]] | polars into-df | polars select (polars col a | polars lowercase) | polars collect",
+                example: "[[a]; [Abc]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn lowercase) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -71,7 +71,7 @@ impl PluginCommand for ToLowerCase {
             },
             Example {
                 description: "Modifies strings to lowercase",
-                example: "[Abc aBc abC] | polars into-df | polars lowercase",
+                example: "[Abc aBc abC] | polars_dyn into-df | polars_dyn lowercase",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

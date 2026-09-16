@@ -15,7 +15,7 @@ impl PluginCommand for ExprStd {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars std"
+        "polars_dyn std"
     }
 
     fn description(&self) -> &str {
@@ -49,7 +49,7 @@ impl PluginCommand for ExprStd {
         vec![
             Example {
                 description: "Std value from columns in a dataframe",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars std | polars collect",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn std | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -66,11 +66,11 @@ impl PluginCommand for ExprStd {
             Example {
                 description: "Std aggregation for a group-by",
                 example: r#"[[a b]; [one 2] [one 2] [two 1] [two 1]]
-            | polars into-df
-            | polars group-by a
-            | polars agg (polars col b | polars std)
-            | polars collect
-            | polars sort-by a"#,
+            | polars_dyn into-df
+            | polars_dyn group-by a
+            | polars_dyn agg (polars_dyn col b | polars_dyn std)
+            | polars_dyn collect
+            | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(

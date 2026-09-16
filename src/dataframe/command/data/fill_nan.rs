@@ -15,7 +15,7 @@ impl PluginCommand for LazyFillNA {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars fill-nan"
+        "polars_dyn fill-nan"
     }
 
     fn description(&self) -> &str {
@@ -54,7 +54,7 @@ impl PluginCommand for LazyFillNA {
         vec![
             Example {
                 description: "Fills the NaN values with 0",
-                example: "[1 2 NaN 3 NaN] | polars into-df | polars fill-nan 0",
+                example: "[1 2 NaN 3 NaN] | polars_dyn into-df | polars_dyn fill-nan 0",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -76,7 +76,7 @@ impl PluginCommand for LazyFillNA {
             },
             Example {
                 description: "Fills the NaN values of a whole dataframe",
-                example: "[[a b]; [0.2 1] [0.1 NaN]] | polars into-df | polars fill-nan 0",
+                example: "[[a b]; [0.2 1] [0.1 NaN]] | polars_dyn into-df | polars_dyn fill-nan 0",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

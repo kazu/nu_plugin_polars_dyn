@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathAbs {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math abs"
+        "polars_dyn math abs"
     }
 
     fn description(&self) -> &str {
@@ -40,9 +40,9 @@ impl PluginCommand for ExprMathAbs {
         vec![Example {
             description: "Compute the absolute value of an integer column",
             example: "[[a]; [0] [-1] [2] [-3] [4]] | 
-    polars into-df | 
-    polars select (polars col a | polars math abs) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math abs) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a" => [0i64, 1i64, 2i64, 3i64, 4i64])

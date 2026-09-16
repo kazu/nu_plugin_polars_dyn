@@ -16,7 +16,7 @@ impl PluginCommand for StrSplit {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars str-split"
+        "polars_dyn str-split"
     }
 
     fn description(&self) -> &str {
@@ -42,9 +42,9 @@ impl PluginCommand for StrSplit {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Split the string by comma, then create a new row for each string",
-            example: r#"[[a]; ["one,two,three"]] | polars into-df 
-                | polars select (polars col a | polars str-split "," | polars explode) 
-                | polars collect"#,
+            example: r#"[[a]; ["one,two,three"]] | polars_dyn into-df 
+                | polars_dyn select (polars_dyn col a | polars_dyn str-split "," | polars_dyn explode) 
+                | polars_dyn collect"#,
             result: Some(
                 NuDataFrame::from(
                     df!(

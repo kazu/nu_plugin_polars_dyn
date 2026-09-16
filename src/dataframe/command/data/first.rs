@@ -20,7 +20,7 @@ impl PluginCommand for FirstDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars first"
+        "polars_dyn first"
     }
 
     fn description(&self) -> &str {
@@ -59,7 +59,7 @@ impl PluginCommand for FirstDF {
         vec![
             Example {
                 description: "Return the first row of a dataframe",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars first",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn first",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -75,7 +75,7 @@ impl PluginCommand for FirstDF {
             },
             Example {
                 description: "Return the first two rows of a dataframe",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars first 2",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn first 2",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -97,12 +97,12 @@ impl PluginCommand for FirstDF {
             },
             Example {
                 description: "Creates a first expression from a column",
-                example: "polars col a | polars first",
+                example: "polars_dyn col a | polars_dyn first",
                 result: None,
             },
             Example {
                 description: "Aggregate the first values in the group.",
-                example: "[[a b c d]; [1 0.5 true Apple] [2 0.5 true Orange] [2 4 true Apple] [3 10 false Apple] [4 13 false Banana] [5 14 true Banana]] | polars into-df -s {a: u8, b: f32, c: bool, d: str} | polars group-by d | polars first | polars sort-by [a] | polars collect",
+                example: "[[a b c d]; [1 0.5 true Apple] [2 0.5 true Orange] [2 4 true Apple] [3 10 false Apple] [4 13 false Banana] [5 14 true Banana]] | polars_dyn into-df -s {a: u8, b: f32, c: bool, d: str} | polars_dyn group-by d | polars_dyn first | polars_dyn sort-by [a] | polars_dyn collect",
                 result: Some(
                     NuDataFrame::new(
                         false,

@@ -36,7 +36,7 @@ impl PluginCommand for OpenDataFrame {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars open"
+        "polars_dyn open"
     }
 
     fn description(&self) -> &str {
@@ -131,7 +131,7 @@ impl PluginCommand for OpenDataFrame {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Takes a file name and creates a dataframe",
-            example: "polars open test.csv",
+            example: "polars_dyn open test.csv",
             result: None,
         }]
     }

@@ -14,7 +14,7 @@ impl PluginCommand for ExprAggGroups {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars agg-groups"
+        "polars_dyn agg-groups"
     }
 
     fn description(&self) -> &str {
@@ -40,11 +40,11 @@ impl PluginCommand for ExprAggGroups {
         vec![Example {
             description: "Get the group index of the group by operations.",
             example: r#"[[group value]; [one 94] [one 95] [one 96] [two 97] [two 98] [two 99]] 
-                | polars into-df 
-                | polars group-by group
-                | polars agg (polars col value | polars agg-groups)
-                | polars collect
-                | polars sort-by group"#,
+                | polars_dyn into-df 
+                | polars_dyn group-by group
+                | polars_dyn agg (polars_dyn col value | polars_dyn agg-groups)
+                | polars_dyn collect
+                | polars_dyn sort-by group"#,
             result: Some(
                 NuDataFrame::from(
                     df!(

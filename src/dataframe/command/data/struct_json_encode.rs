@@ -14,7 +14,7 @@ impl PluginCommand for StructJsonEncode {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars struct-json-encode"
+        "polars_dyn struct-json-encode"
     }
 
     fn description(&self) -> &str {
@@ -31,10 +31,10 @@ impl PluginCommand for StructJsonEncode {
         vec![Example {
             description: "Encode a struct as JSON",
             example: r#"[[id person]; [1 {name: "Bob", age: 36}] [2 {name: "Betty", age: 63}]] 
-                    | polars into-df -s {id: i32, person: {name: str, age: u8}} 
-                    | polars select id (polars col person | polars struct-json-encode | polars as encoded)
-                    | polars sort-by id
-                    | polars collect"#,
+                    | polars_dyn into-df -s {id: i32, person: {name: str, age: u8}} 
+                    | polars_dyn select id (polars_dyn col person | polars_dyn struct-json-encode | polars_dyn as encoded)
+                    | polars_dyn sort-by id
+                    | polars_dyn collect"#,
             result: Some(
                 NuDataFrame::from(
                     df!(

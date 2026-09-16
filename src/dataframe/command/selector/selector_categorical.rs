@@ -14,7 +14,7 @@ impl PluginCommand for SelectorCategorical {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector categorical"
+        "polars_dyn selector categorical"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorCategorical {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector categorical",
+            example: "polars_dyn selector categorical",
             description: "Create a selector for categorical columns",
             result: None,
         }]

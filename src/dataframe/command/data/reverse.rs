@@ -12,7 +12,7 @@ impl PluginCommand for LazyReverse {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars reverse"
+        "polars_dyn reverse"
     }
 
     fn description(&self) -> &str {
@@ -37,7 +37,7 @@ impl PluginCommand for LazyReverse {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Reverses the dataframe.",
-            example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars reverse",
+            example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn reverse",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

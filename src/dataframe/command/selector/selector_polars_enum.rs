@@ -14,7 +14,7 @@ impl PluginCommand for SelectorPolarsEnum {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector enum"
+        "polars_dyn selector enum"
     }
 
     fn description(&self) -> &str {
@@ -29,7 +29,7 @@ impl PluginCommand for SelectorPolarsEnum {
 
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
-            example: "polars selector enum",
+            example: "polars_dyn selector enum",
             description: "Create a selector for enum columns",
             result: None,
         }]

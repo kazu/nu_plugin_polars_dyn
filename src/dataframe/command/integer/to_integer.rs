@@ -19,7 +19,7 @@ impl PluginCommand for ToInteger {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars integer"
+        "polars_dyn integer"
     }
 
     fn description(&self) -> &str {
@@ -59,7 +59,7 @@ impl PluginCommand for ToInteger {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Modifies strings to integer",
-            example: "[[a b]; [1, '2']] | polars into-df | polars select (polars col b | polars integer) | polars collect",
+            example: "[[a b]; [1, '2']] | polars_dyn into-df | polars_dyn select (polars_dyn col b | polars_dyn integer) | polars_dyn collect",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new("b".to_string(), vec![Value::test_int(2)])],

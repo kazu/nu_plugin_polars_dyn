@@ -18,7 +18,7 @@ impl PluginCommand for SelectorMatches {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector matches"
+        "polars_dyn selector matches"
     }
 
     fn description(&self) -> &str {
@@ -46,10 +46,10 @@ impl PluginCommand for SelectorMatches {
                     "baz": [2.0, 5.5],
                     "zap": [0, 1],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector matches "[^z]a") |
-                polars sort-by bar baz |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector matches "[^z]a") |
+                polars_dyn sort-by bar baz |
+                polars_dyn collect
                 "#,
                 description: "Match column names containing an 'a', preceded by a character that is not 'z'",
                 result: Some(
@@ -71,10 +71,10 @@ impl PluginCommand for SelectorMatches {
                     "baz": [2.0, 5.5],
                     "zap": [0, 1],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector matches "(?i)R|z$" | polars selector not) |
-                polars sort-by foo zap |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector matches "(?i)R|z$" | polars_dyn selector not) |
+                polars_dyn sort-by foo zap |
+                polars_dyn collect
                 "#,
                 description: "Do not match column names ending in 'R' or 'z' (case-insensitively)",
                 result: Some(

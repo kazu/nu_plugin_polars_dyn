@@ -17,7 +17,7 @@ impl PluginCommand for SelectorString {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector string"
+        "polars_dyn selector string"
     }
 
     fn description(&self) -> &str {
@@ -43,9 +43,9 @@ impl PluginCommand for SelectorString {
     "age": [30, 25],
     "active": [true, false],
 } |
-polars into-df --as-columns |
-polars select (polars selector string) |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector string) |
+polars_dyn collect"#,
                 description: "Select all string columns",
                 result: Some(
                     NuDataFrame::from(
@@ -58,7 +58,7 @@ polars collect"#,
                 ),
             },
             Example {
-                example: "polars selector string --include-categorical",
+                example: "polars_dyn selector string --include-categorical",
                 description: "Create a selector for string and categorical columns",
                 result: None,
             },

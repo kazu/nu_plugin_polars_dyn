@@ -17,7 +17,7 @@ impl PluginCommand for SelectorByName {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector by-name"
+        "polars_dyn selector by-name"
     }
 
     fn description(&self) -> &str {
@@ -44,15 +44,15 @@ impl PluginCommand for SelectorByName {
         vec![
             Example {
                 description: "Create a selector for columns by name",
-                example: "polars selector by-name foo bar",
+                example: "polars_dyn selector by-name foo bar",
                 result: None,
             },
             Example {
                 description: "Add 10 to specific columns using with-column",
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-                    | polars into-df
-                    | polars with-column ((polars selector by-name a c) + 10)
-                    | polars collect"#,
+                    | polars_dyn into-df
+                    | polars_dyn with-column ((polars_dyn selector by-name a c) + 10)
+                    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

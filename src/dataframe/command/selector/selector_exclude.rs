@@ -19,11 +19,11 @@ impl PluginCommand for SelectorExclude {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector exclude"
+        "polars_dyn selector exclude"
     }
 
     fn description(&self) -> &str {
-        "Select all columns except those with the given name(s). This is the inverse of `polars selector by-name`."
+        "Select all columns except those with the given name(s). This is the inverse of `polars_dyn selector by-name`."
     }
 
     fn signature(&self) -> Signature {
@@ -45,9 +45,9 @@ impl PluginCommand for SelectorExclude {
     "b": [3.0, 4.0],
     "c": [5, 6],
 } |
-polars into-df --as-columns |
-polars select (polars selector exclude a b) |
-polars collect"#,
+polars_dyn into-df --as-columns |
+polars_dyn select (polars_dyn selector exclude a b) |
+polars_dyn collect"#,
                 description: "Select all columns except 'a' and 'b'",
                 result: Some(
                     NuDataFrame::from(
@@ -61,9 +61,9 @@ polars collect"#,
             },
             Example {
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-    | polars into-df
-    | polars select (polars selector exclude c)
-    | polars collect"#,
+    | polars_dyn into-df
+    | polars_dyn select (polars_dyn selector exclude c)
+    | polars_dyn collect"#,
                 description: "Select all columns except 'c'",
                 result: None,
             },

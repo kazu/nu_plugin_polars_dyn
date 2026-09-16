@@ -15,7 +15,7 @@ impl PluginCommand for ArgMin {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-min"
+        "polars_dyn arg-min"
     }
 
     fn description(&self) -> &str {
@@ -44,7 +44,7 @@ impl PluginCommand for ArgMin {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Returns index for min value",
-            example: "[1 3 2] | polars into-df | polars arg-min",
+            example: "[1 3 2] | polars_dyn into-df | polars_dyn arg-min",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new("arg_min".to_string(), vec![Value::test_int(0)])],

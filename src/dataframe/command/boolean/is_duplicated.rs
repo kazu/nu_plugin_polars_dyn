@@ -19,7 +19,7 @@ impl PluginCommand for IsDuplicated {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars is-duplicated"
+        "polars_dyn is-duplicated"
     }
 
     fn description(&self) -> &str {
@@ -45,7 +45,7 @@ impl PluginCommand for IsDuplicated {
         vec![
             Example {
                 description: "Create mask indicating duplicated values",
-                example: "[5 6 6 6 8 8 8] | polars into-df | polars is-duplicated",
+                example: "[5 6 6 6 8 8 8] | polars_dyn into-df | polars_dyn is-duplicated",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -69,7 +69,7 @@ impl PluginCommand for IsDuplicated {
             },
             Example {
                 description: "Create mask indicating duplicated rows in a dataframe",
-                example: "[[a, b]; [1 2] [1 2] [3 3] [3 3] [1 1]] | polars into-df | polars is-duplicated",
+                example: "[[a, b]; [1 2] [1 2] [3 3] [3 3] [1 1]] | polars_dyn into-df | polars_dyn is-duplicated",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

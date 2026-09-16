@@ -15,7 +15,7 @@ impl PluginCommand for LazyFillNull {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars fill-null"
+        "polars_dyn fill-null"
     }
 
     fn description(&self) -> &str {
@@ -54,7 +54,7 @@ impl PluginCommand for LazyFillNull {
         vec![
             Example {
                 description: "Fills the null values by 0",
-                example: "[1 2 2 3 3] | polars into-df | polars shift 2 | polars fill-null 0",
+                example: "[1 2 2 3 3] | polars_dyn into-df | polars_dyn shift 2 | polars_dyn fill-null 0",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -77,9 +77,9 @@ impl PluginCommand for LazyFillNull {
             Example {
                 description: "Fills the null values in expression",
                 example: "[[a]; [1] [2] [2] [3] [3]]
-                    | polars into-df
-                    | polars select (polars col a | polars shift 2 | polars fill-null 0)
-                    | polars collect",
+                    | polars_dyn into-df
+                    | polars_dyn select (polars_dyn col a | polars_dyn shift 2 | polars_dyn fill-null 0)
+                    | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

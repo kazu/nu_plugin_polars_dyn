@@ -21,7 +21,7 @@ impl PluginCommand for Contains {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars contains"
+        "polars_dyn contains"
     }
 
     fn description(&self) -> &str {
@@ -60,8 +60,8 @@ impl PluginCommand for Contains {
         vec![
             Example {
                 description: "Returns boolean indicating if pattern was found in a column",
-                example: "let df = [[a]; [abc] [acb] [acb]] | polars into-df;
-                let df2 = $df | polars with-column [(polars col a | polars contains ab | polars as b)] | polars collect;
+                example: "let df = [[a]; [abc] [acb] [acb]] | polars_dyn into-df;
+                let df2 = $df | polars_dyn with-column [(polars_dyn col a | polars_dyn contains ab | polars_dyn as b)] | polars_dyn collect;
                 $df2.b",
                 result: Some(
                     NuDataFrame::try_from_columns(
@@ -82,7 +82,7 @@ impl PluginCommand for Contains {
             },
             Example {
                 description: "Returns boolean indicating if pattern was found",
-                example: "[abc acb acb] | polars into-df | polars contains ab",
+                example: "[abc acb acb] | polars_dyn into-df | polars_dyn contains ab",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

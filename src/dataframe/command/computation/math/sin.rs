@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathSin {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math sin"
+        "polars_dyn math sin"
     }
 
     fn description(&self) -> &str {
@@ -39,7 +39,7 @@ impl PluginCommand for ExprMathSin {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Compute the element-wise sine of a float column",
-            example: "[[a]; [0.0] [1.5707963267948966]] | polars into-df | polars select (polars col a | polars math sin) | polars collect",
+            example: "[[a]; [0.0] [1.5707963267948966]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn math sin) | polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a" => [0.0f64, 1.0f64]).expect("simple df for test should not fail"),

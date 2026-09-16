@@ -20,7 +20,7 @@ impl PluginCommand for NotSeries {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars not"
+        "polars_dyn not"
     }
 
     fn description(&self) -> &str {
@@ -45,7 +45,7 @@ impl PluginCommand for NotSeries {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Inverts boolean mask",
-            example: "[true false true] | polars into-df | polars not",
+            example: "[true false true] | polars_dyn into-df | polars_dyn not",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

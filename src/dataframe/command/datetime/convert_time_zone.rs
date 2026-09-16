@@ -23,7 +23,7 @@ impl PluginCommand for ConvertTimeZone {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars convert-time-zone"
+        "polars_dyn convert-time-zone"
     }
 
     fn description(&self) -> &str {
@@ -54,9 +54,9 @@ impl PluginCommand for ConvertTimeZone {
         vec![
             Example {
                 description: "Convert timezone for timezone-aware datetime",
-                example: r#"["2025-04-10 09:30:00 -0400" "2025-04-10 10:30:00 -0400"] | polars into-df
-                    | polars as-datetime "%Y-%m-%d %H:%M:%S %z"
-                    | polars select (polars col datetime | polars convert-time-zone "Europe/Lisbon")"#,
+                example: r#"["2025-04-10 09:30:00 -0400" "2025-04-10 10:30:00 -0400"] | polars_dyn into-df
+                    | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S %z"
+                    | polars_dyn select (polars_dyn col datetime | polars_dyn convert-time-zone "Europe/Lisbon")"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -98,9 +98,9 @@ impl PluginCommand for ConvertTimeZone {
             },
             Example {
                 description: "Timezone conversions for timezone-naive datetime will assume the original timezone is UTC",
-                example: r#"["2025-04-10 09:30:00" "2025-04-10 10:30:00"] | polars into-df
-                    | polars as-datetime "%Y-%m-%d %H:%M:%S" --naive
-                    | polars select (polars col datetime | polars convert-time-zone "America/New_York")"#,
+                example: r#"["2025-04-10 09:30:00" "2025-04-10 10:30:00"] | polars_dyn into-df
+                    | polars_dyn as-datetime "%Y-%m-%d %H:%M:%S" --naive
+                    | polars_dyn select (polars_dyn col datetime | polars_dyn convert-time-zone "America/New_York")"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

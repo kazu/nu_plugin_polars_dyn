@@ -13,7 +13,7 @@ impl PluginCommand for ExprCount {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars count"
+        "polars_dyn count"
     }
 
     fn description(&self) -> &str {
@@ -38,9 +38,9 @@ impl PluginCommand for ExprCount {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Count the number of non-null values in a column",
-            example: r#"[[a]; ["foo"] ["bar"] [null]] | polars into-df 
-                    | polars select (polars col a | polars count) 
-                    | polars collect"#,
+            example: r#"[[a]; ["foo"] ["bar"] [null]] | polars_dyn into-df 
+                    | polars_dyn select (polars_dyn col a | polars_dyn count) 
+                    | polars_dyn collect"#,
             result: Some(
                 NuDataFrame::from(
                     df!(

@@ -17,7 +17,7 @@ impl PluginCommand for SelectorFirst {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector first"
+        "polars_dyn selector first"
     }
 
     fn description(&self) -> &str {
@@ -39,20 +39,20 @@ impl PluginCommand for SelectorFirst {
         vec![
             Example {
                 description: "Create a selector for the first column",
-                example: "polars selector first",
+                example: "polars_dyn selector first",
                 result: None,
             },
             Example {
                 description: "Create a selector for the first 3 columns",
-                example: "polars selector first 3",
+                example: "polars_dyn selector first 3",
                 result: None,
             },
             Example {
                 description: "Create a new column from the first column using with-column",
                 example: r#"[[a b c]; [1 2 3] [4 5 6]]
-                    | polars into-df
-                    | polars with-column ((polars selector first) * 10 | polars as a_times_10)
-                    | polars collect"#,
+                    | polars_dyn into-df
+                    | polars_dyn with-column ((polars_dyn selector first) * 10 | polars_dyn as a_times_10)
+                    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

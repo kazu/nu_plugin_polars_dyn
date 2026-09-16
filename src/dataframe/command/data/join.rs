@@ -21,7 +21,7 @@ impl PluginCommand for LazyJoin {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars join"
+        "polars_dyn join"
     }
 
     fn description(&self) -> &str {
@@ -66,9 +66,9 @@ impl PluginCommand for LazyJoin {
         vec![
             Example {
                 description: "Join two lazy dataframes",
-                example: r#"let df_a = ([[a b c];[1 "a" 0] [2 "b" 1] [1 "c" 2] [1 "c" 3]] | polars into-lazy)
-    let df_b = ([["foo" "bar" "ham"];[1 "a" "let"] [2 "c" "var"] [3 "c" "const"]] | polars into-lazy)
-    $df_a | polars join $df_b a foo | polars collect"#,
+                example: r#"let df_a = ([[a b c];[1 "a" 0] [2 "b" 1] [1 "c" 2] [1 "c" 3]] | polars_dyn into-lazy)
+    let df_b = ([["foo" "bar" "ham"];[1 "a" "let"] [2 "c" "var"] [3 "c" "const"]] | polars_dyn into-lazy)
+    $df_a | polars_dyn join $df_b a foo | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -127,9 +127,9 @@ impl PluginCommand for LazyJoin {
             },
             Example {
                 description: "Join one eager dataframe with a lazy dataframe",
-                example: r#"let df_a = ([[a b c];[1 "a" 0] [2 "b" 1] [1 "c" 2] [1 "c" 3]] | polars into-df)
-    let df_b = ([["foo" "bar" "ham"];[1 "a" "let"] [2 "c" "var"] [3 "c" "const"]] | polars into-lazy)
-    $df_a | polars join $df_b a foo"#,
+                example: r#"let df_a = ([[a b c];[1 "a" 0] [2 "b" 1] [1 "c" 2] [1 "c" 3]] | polars_dyn into-df)
+    let df_b = ([["foo" "bar" "ham"];[1 "a" "let"] [2 "c" "var"] [3 "c" "const"]] | polars_dyn into-lazy)
+    $df_a | polars_dyn join $df_b a foo"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -188,9 +188,9 @@ impl PluginCommand for LazyJoin {
             },
             Example {
                 description: "Perform a full join of two dataframes and coalesce columns",
-                example: r#"let table1 = [[A B]; ["common" "common"] ["table1" "only"]] | polars into-df
-                let table2 = [[A C]; ["common" "common"] ["table2" "only"]] | polars into-df
-                $table1 | polars join -f $table2 --coalesce-columns A A"#,
+                example: r#"let table1 = [[A B]; ["common" "common"] ["table1" "only"]] | polars_dyn into-df
+                let table2 = [[A C]; ["common" "common"] ["table2" "only"]] | polars_dyn into-df
+                $table1 | polars_dyn join -f $table2 --coalesce-columns A A"#,
                 result: Some(
                     NuDataFrame::new(
                         false,
@@ -206,9 +206,9 @@ impl PluginCommand for LazyJoin {
             },
             Example {
                 description: "Join one eager dataframe with another using a cross join",
-                example: r#"let tokens = [[monopoly_token]; [hat] [shoe] [boat]] | polars into-df
-    let players = [[name, cash]; [Alice, 78] [Bob, 135]] | polars into-df
-    $players | polars select (polars col name) | polars join --cross $tokens | polars collect"#,
+                example: r#"let tokens = [[monopoly_token]; [hat] [shoe] [boat]] | polars_dyn into-df
+    let players = [[name, cash]; [Alice, 78] [Bob, 135]] | polars_dyn into-df
+    $players | polars_dyn select (polars_dyn col name) | polars_dyn join --cross $tokens | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -245,11 +245,11 @@ impl PluginCommand for LazyJoin {
             Example {
                 description: "Join on column expressions",
                 example: r#"
-                let df1 = [[a b]; ["2025-01-01 01:00:00+0000" 1] ["2025-01-02 05:36:42+0000" 2]] | polars into-df --schema {a: "datetime<ms,UTC>", b: i8}
+                let df1 = [[a b]; ["2025-01-01 01:00:00+0000" 1] ["2025-01-02 05:36:42+0000" 2]] | polars_dyn into-df --schema {a: "datetime<ms,UTC>", b: i8}
 
-                let df2 = [[a c]; ["2025-01-01 00:00:00+0000" a] ["2025-01-02 00:00:00+0000" b]] | polars into-df --schema {a: "datetime<ms,UTC>", c: str}
+                let df2 = [[a c]; ["2025-01-01 00:00:00+0000" a] ["2025-01-02 00:00:00+0000" b]] | polars_dyn into-df --schema {a: "datetime<ms,UTC>", c: str}
 
-                $df1 | polars join $df2 [(polars col a | polars truncate 1d)] [a]"#,
+                $df1 | polars_dyn join $df2 [(polars_dyn col a | polars_dyn truncate 1d)] [a]"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -313,11 +313,11 @@ impl PluginCommand for LazyJoin {
             },
             Example {
                 description: "Join on nulls",
-                example: r#"[[col1 col2]; [2 a] [3 b] [null c]] | polars into-df
-                | polars join (
-                    [[col1 col3]; [2 x] [3 y] [null z]] | polars into-df
+                example: r#"[[col1 col2]; [2 a] [3 b] [null c]] | polars_dyn into-df
+                | polars_dyn join (
+                    [[col1 col3]; [2 x] [3 y] [null z]] | polars_dyn into-df
                 ) [col1] [col1] --nulls-equal
-                | polars collect"#,
+                | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

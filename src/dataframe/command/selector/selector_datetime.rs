@@ -16,7 +16,7 @@ impl PluginCommand for SelectorDatetime {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector datetime"
+        "polars_dyn selector datetime"
     }
 
     fn description(&self) -> &str {
@@ -44,17 +44,17 @@ impl PluginCommand for SelectorDatetime {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
-                example: "polars selector datetime",
+                example: "polars_dyn selector datetime",
                 description: "Create a selector for all datetime columns",
                 result: None,
             },
             Example {
-                example: "polars selector datetime --time-unit [ns us]",
+                example: "polars_dyn selector datetime --time-unit [ns us]",
                 description: "Create a selector for nanosecond or microsecond datetime columns",
                 result: None,
             },
             Example {
-                example: r#"polars selector datetime --time-unit [ns] --time-zone [UTC]"#,
+                example: r#"polars_dyn selector datetime --time-unit [ns] --time-zone [UTC]"#,
                 description: "Create a selector for nanosecond datetime columns with UTC timezone",
                 result: None,
             },

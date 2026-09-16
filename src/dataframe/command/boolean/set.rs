@@ -19,7 +19,7 @@ impl PluginCommand for SetSeries {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars set"
+        "polars_dyn set"
     }
 
     fn description(&self) -> &str {
@@ -51,9 +51,9 @@ impl PluginCommand for SetSeries {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Shifts the values by a given period",
-            example: r#"let s = ([1 2 2 3 3] | polars into-df | polars shift 2);
-    let mask = ($s | polars is-null);
-    $s | polars set 0 --mask $mask"#,
+            example: r#"let s = ([1 2 2 3 3] | polars_dyn into-df | polars_dyn shift 2);
+    let mask = ($s | polars_dyn is-null);
+    $s | polars_dyn set 0 --mask $mask"#,
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

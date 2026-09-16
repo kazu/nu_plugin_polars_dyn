@@ -17,7 +17,7 @@ impl PluginCommand for LazyCollect {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars collect"
+        "polars_dyn collect"
     }
 
     fn description(&self) -> &str {
@@ -42,7 +42,7 @@ impl PluginCommand for LazyCollect {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "drop duplicates",
-            example: "[[a b]; [1 2] [3 4]] | polars into-lazy | polars collect",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-lazy | polars_dyn collect",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![

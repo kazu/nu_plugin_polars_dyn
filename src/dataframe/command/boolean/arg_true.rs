@@ -19,7 +19,7 @@ impl PluginCommand for ArgTrue {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-true"
+        "polars_dyn arg-true"
     }
 
     fn description(&self) -> &str {
@@ -48,7 +48,7 @@ impl PluginCommand for ArgTrue {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Returns indexes where values are true",
-            example: "[false true false] | polars into-df | polars arg-true",
+            example: "[false true false] | polars_dyn into-df | polars_dyn arg-true",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

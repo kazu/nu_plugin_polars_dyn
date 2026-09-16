@@ -22,7 +22,7 @@ impl PluginCommand for Unique {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars unique"
+        "polars_dyn unique"
     }
 
     fn description(&self) -> &str {
@@ -72,7 +72,7 @@ impl PluginCommand for Unique {
         vec![
             Example {
                 description: "Returns unique values from a series",
-                example: "[2 2 2 2 2] | polars into-df | polars unique",
+                example: "[2 2 2 2 2] | polars_dyn into-df | polars_dyn unique",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new("0".to_string(), vec![Value::test_int(2)])],
@@ -85,7 +85,7 @@ impl PluginCommand for Unique {
             },
             Example {
                 description: "Returns unique values in a subset of lazyframe columns",
-                example: "[[a b c]; [1 2 1] [2 2 2] [3 2 1]] | polars into-lazy | polars unique --subset [b c] | polars collect",
+                example: "[[a b c]; [1 2 1] [2 2 2] [3 2 1]] | polars_dyn into-lazy | polars_dyn unique --subset [b c] | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -112,9 +112,9 @@ impl PluginCommand for Unique {
             Example {
                 description: "Returns unique values in a subset of lazyframe columns",
                 example: r#"[[a b c]; [1 2 1] [2 2 2] [3 2 1]]
-    | polars into-lazy
-    | polars unique --subset [b c] --last
-    | polars collect"#,
+    | polars_dyn into-lazy
+    | polars_dyn unique --subset [b c] --last
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -141,9 +141,9 @@ impl PluginCommand for Unique {
             Example {
                 description: "Returns unique values in a subset of lazyframe columns",
                 example: r#"[[a]; [2] [1] [2]]
-    | polars into-lazy
-    | polars select (polars col a | polars unique)
-    | polars collect"#,
+    | polars_dyn into-lazy
+    | polars_dyn select (polars_dyn col a | polars_dyn unique)
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -160,9 +160,9 @@ impl PluginCommand for Unique {
             Example {
                 description: "Returns unique values in a subset of lazyframe columns",
                 example: r#"[[a]; [2] [1] [2]]
-    | polars into-lazy
-    | polars select (polars col a | polars unique --maintain-order)
-    | polars collect"#,
+    | polars_dyn into-lazy
+    | polars_dyn select (polars_dyn col a | polars_dyn unique --maintain-order)
+    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

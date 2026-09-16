@@ -16,7 +16,7 @@ impl PluginCommand for ExprWhen {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars when"
+        "polars_dyn when"
     }
 
     fn description(&self) -> &str {
@@ -53,25 +53,25 @@ impl PluginCommand for ExprWhen {
         vec![
             Example {
                 description: "Create a when conditions",
-                example: "polars when ((polars col a) > 2) 4",
+                example: "polars_dyn when ((polars_dyn col a) > 2) 4",
                 result: None,
             },
             Example {
                 description: "Create a when conditions",
-                example: "polars when ((polars col a) > 2) 4 | polars when ((polars col a) < 0) 6",
+                example: "polars_dyn when ((polars_dyn col a) > 2) 4 | polars_dyn when ((polars_dyn col a) < 0) 6",
                 result: None,
             },
             Example {
                 description: "Create a new column for the dataframe",
                 example: r#"[[a b]; [6 2] [1 4] [4 1]]
-   | polars into-lazy
-   | polars with-column (
-    polars when ((polars col a) > 2) 4 | polars otherwise 5 | polars as c
+   | polars_dyn into-lazy
+   | polars_dyn with-column (
+    polars_dyn when ((polars_dyn col a) > 2) 4 | polars_dyn otherwise 5 | polars_dyn as c
      )
-   | polars with-column (
-    polars when ((polars col a) > 5) 10 | polars when ((polars col a) < 2) 6 | polars otherwise 0 | polars as d
+   | polars_dyn with-column (
+    polars_dyn when ((polars_dyn col a) > 5) 10 | polars_dyn when ((polars_dyn col a) < 2) 6 | polars_dyn otherwise 0 | polars_dyn as d
      )
-   | polars collect"#,
+   | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

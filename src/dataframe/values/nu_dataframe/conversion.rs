@@ -468,7 +468,7 @@ fn typed_column_to_series(name: PlSmallStr, column: TypedColumn) -> Result<Serie
                                         "",
                                     )
                                     .with_help(format!(
-                                        "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars as-date <format>`."
+                                        "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars_dyn as-date <format>`."
                                     )),
                                 )
                             })?
@@ -528,7 +528,7 @@ fn typed_column_to_series(name: PlSmallStr, column: TypedColumn) -> Result<Serie
                                             "",
                                         )
                                         .with_help(format!(
-                                            "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars as-datetime <format>`."
+                                            "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars_dyn as-datetime <format>`."
                                         )),
                                     )
                                 })?
@@ -548,7 +548,7 @@ fn typed_column_to_series(name: PlSmallStr, column: TypedColumn) -> Result<Serie
                                             "",
                                         )
                                         .with_help(format!(
-                                            "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars as-datetime <format>`."
+                                            "Expected format {expected_format}. If you need to parse with another format, please set the schema to `str` and parse with `polars_dyn as-datetime <format>`."
                                         )),
                                     )
                                 })?

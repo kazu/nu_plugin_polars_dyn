@@ -74,7 +74,7 @@ impl PolarsPlugin {
     }
 
     /// Turns the plugin GC off the first time the plugin holds an engine. Cached values live
-    /// until `polars store-rm` or the end of the plugin process, so the engine must not stop
+    /// until `polars_dyn store-rm` or the end of the plugin process, so the engine must not stop
     /// the plugin while any value is cached.
     pub(crate) fn disable_gc_once(&self, engine: &EngineInterface) -> Result<(), ShellError> {
         if self.gc_disabled.get().is_some() {

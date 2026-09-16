@@ -18,7 +18,7 @@ impl PluginCommand for ToNu {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars into-nu"
+        "polars_dyn into-nu"
     }
 
     fn description(&self) -> &str {
@@ -69,17 +69,17 @@ impl PluginCommand for ToNu {
         vec![
             Example {
                 description: "Shows head rows from dataframe",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars into-nu --index",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn into-nu --index",
                 result: Some(Value::list(vec![rec_1, rec_2], Span::test_data())),
             },
             Example {
                 description: "Shows tail rows from dataframe",
-                example: "[[a b]; [1 2] [5 6] [3 4]] | polars into-df | polars into-nu --tail --rows 1 --index",
+                example: "[[a b]; [1 2] [5 6] [3 4]] | polars_dyn into-df | polars_dyn into-nu --tail --rows 1 --index",
                 result: Some(Value::list(vec![rec_3], Span::test_data())),
             },
             Example {
                 description: "Convert a col expression into a nushell value",
-                example: "polars col a | polars into-nu --index",
+                example: "polars_dyn col a | polars_dyn into-nu --index",
                 result: Some(Value::test_record(record! {
                     "expr" =>  Value::test_string("column"),
                     "value" => Value::test_string("a"),

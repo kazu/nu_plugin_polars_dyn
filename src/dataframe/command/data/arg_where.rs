@@ -16,7 +16,7 @@ impl PluginCommand for ExprArgWhere {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars arg-where"
+        "polars_dyn arg-where"
     }
 
     fn description(&self) -> &str {
@@ -33,8 +33,8 @@ impl PluginCommand for ExprArgWhere {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Return a dataframe where the value match the expression",
-            example: "let df = ([[a b]; [one 1] [two 2] [three 3]] | polars into-df);
-    $df | polars select (polars arg-where ((polars col b) >= 2) | polars as b_arg)",
+            example: "let df = ([[a b]; [one 1] [two 2] [three 3]] | polars_dyn into-df);
+    $df | polars_dyn select (polars_dyn arg-where ((polars_dyn col b) >= 2) | polars_dyn as b_arg)",
             result: Some(
                 NuDataFrame::try_from_columns(
                     vec![Column::new(

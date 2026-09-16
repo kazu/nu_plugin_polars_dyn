@@ -15,7 +15,7 @@ impl PluginCommand for ExprMean {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars mean"
+        "polars_dyn mean"
     }
 
     fn description(&self) -> &str {
@@ -49,7 +49,7 @@ impl PluginCommand for ExprMean {
         vec![
             Example {
                 description: "Mean value from columns in a dataframe",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars mean",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn mean",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -66,11 +66,11 @@ impl PluginCommand for ExprMean {
             Example {
                 description: "Mean aggregation for a group-by",
                 example: r#"[[a b]; [one 2] [one 4] [two 1]]
-                | polars into-df
-                | polars group-by a
-                | polars agg (polars col b | polars mean)
-                | polars collect
-                | polars sort-by a"#,
+                | polars_dyn into-df
+                | polars_dyn group-by a
+                | polars_dyn agg (polars_dyn col b | polars_dyn mean)
+                | polars_dyn collect
+                | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

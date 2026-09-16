@@ -21,7 +21,7 @@ impl PluginCommand for StrLengths {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars str-lengths"
+        "polars_dyn str-lengths"
     }
 
     fn description(&self) -> &str {
@@ -60,7 +60,7 @@ impl PluginCommand for StrLengths {
         vec![
             Example {
                 description: "Returns string lengths for a column",
-                example: "[[a]; [a] [ab] [abc]] | polars into-df | polars select (polars col a | polars str-lengths) | polars collect",
+                example: "[[a]; [a] [ab] [abc]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn str-lengths) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -76,7 +76,7 @@ impl PluginCommand for StrLengths {
             },
             Example {
                 description: "Returns string lengths",
-                example: "[a ab abc] | polars into-df | polars str-lengths",
+                example: "[a ab abc] | polars_dyn into-df | polars_dyn str-lengths",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

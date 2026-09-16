@@ -13,7 +13,7 @@ impl PluginCommand for ColumnsDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars columns"
+        "polars_dyn columns"
     }
 
     fn description(&self) -> &str {
@@ -38,7 +38,7 @@ impl PluginCommand for ColumnsDF {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Dataframe columns",
-            example: "[[a b]; [1 2] [3 4]] | polars into-df | polars columns",
+            example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn columns",
             result: Some(Value::list(
                 vec![Value::test_string("a"), Value::test_string("b")],
                 Span::test_data(),

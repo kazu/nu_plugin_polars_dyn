@@ -17,7 +17,7 @@ impl PluginCommand for Over {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars over"
+        "polars_dyn over"
     }
 
     fn description(&self) -> &str {
@@ -49,9 +49,9 @@ impl PluginCommand for Over {
             Example {
                 description: "Compute expression over an aggregation window",
                 example: r#"[[a b]; [x 2] [x 4] [y 6] [y 4]]
-        | polars into-lazy
-        | polars select a (polars col b | polars cumulative sum | polars over a | polars as cum_b)
-        | polars collect"#,
+        | polars_dyn into-lazy
+        | polars_dyn select a (polars_dyn col b | polars_dyn cumulative sum | polars_dyn over a | polars_dyn as cum_b)
+        | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(
@@ -66,9 +66,9 @@ impl PluginCommand for Over {
             Example {
                 description: "Compute expression over an aggregation window where partitions are defined by expressions",
                 example: r#"[[a b]; [x 2] [X 4] [Y 6] [y 4]]
-        | polars into-lazy
-        | polars select a (polars col b | polars cumulative sum | polars over (polars col a | polars lowercase) | polars as cum_b)
-        | polars collect"#,
+        | polars_dyn into-lazy
+        | polars_dyn select a (polars_dyn col b | polars_dyn cumulative sum | polars_dyn over (polars_dyn col a | polars_dyn lowercase) | polars_dyn as cum_b)
+        | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(

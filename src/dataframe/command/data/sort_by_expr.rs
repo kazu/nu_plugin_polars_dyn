@@ -18,7 +18,7 @@ impl PluginCommand for LazySortBy {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars sort-by"
+        "polars_dyn sort-by"
     }
 
     fn description(&self) -> &str {
@@ -61,7 +61,7 @@ impl PluginCommand for LazySortBy {
         vec![
             Example {
                 description: "Sort dataframe by one column",
-                example: "[[a b]; [6 2] [1 4] [4 1]] | polars into-df | polars sort-by a",
+                example: "[[a b]; [6 2] [1 4] [4 1]] | polars_dyn into-df | polars_dyn sort-by a",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -83,7 +83,7 @@ impl PluginCommand for LazySortBy {
             },
             Example {
                 description: "Sort column using two columns",
-                example: "[[a b]; [6 2] [1 1] [1 4] [2 4]] | polars into-df | polars sort-by [a b] -r [false true]",
+                example: "[[a b]; [6 2] [1 1] [1 4] [2 4]] | polars_dyn into-df | polars_dyn sort-by [a b] -r [false true]",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

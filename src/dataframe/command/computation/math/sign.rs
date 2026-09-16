@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathSign {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math sign"
+        "polars_dyn math sign"
     }
 
     fn description(&self) -> &str {
@@ -39,7 +39,7 @@ impl PluginCommand for ExprMathSign {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Compute the element-wise sign of an integer column",
-            example: "[[a]; [0] [-1] [2] [-3] [4]] | polars into-df | polars select (polars col a | polars math sign) | polars collect",
+            example: "[[a]; [0] [-1] [2] [-3] [4]] | polars_dyn into-df | polars_dyn select (polars_dyn col a | polars_dyn math sign) | polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a" => [0i64, -1i64, 1i64, -1i64, 1i64])

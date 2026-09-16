@@ -20,7 +20,7 @@ impl PluginCommand for StrStripChars {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars str-strip-chars"
+        "polars_dyn str-strip-chars"
     }
 
     fn description(&self) -> &str {
@@ -53,7 +53,7 @@ impl PluginCommand for StrStripChars {
         vec![
             Example {
                 description: "Strip characters from both ends of strings in a column",
-                example: r#"[[text]; ["!!!hello!!!"] ["!!!world!!!"] ["!!!test!!!"]] | polars into-df | polars select (polars col text | polars str-strip-chars "!") | polars collect"#,
+                example: r#"[[text]; ["!!!hello!!!"] ["!!!world!!!"] ["!!!test!!!"]] | polars_dyn into-df | polars_dyn select (polars_dyn col text | polars_dyn str-strip-chars "!") | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -73,7 +73,7 @@ impl PluginCommand for StrStripChars {
             },
             Example {
                 description: "Strip characters from both ends of strings in a column using an expression",
-                example: r#"[[text]; ["!!!hello!!!"] ["!!!world!!!"] ["!!!test!!!"]] | polars into-df | polars select (polars col text | polars str-strip-chars (polars lit "!")) | polars collect"#,
+                example: r#"[[text]; ["!!!hello!!!"] ["!!!world!!!"] ["!!!test!!!"]] | polars_dyn into-df | polars_dyn select (polars_dyn col text | polars_dyn str-strip-chars (polars_dyn lit "!")) | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -93,7 +93,7 @@ impl PluginCommand for StrStripChars {
             },
             Example {
                 description: "Strip characters from end of strings in a column",
-                example: r#"[[text]; ["hello!!!"] ["world!!!"] ["test!!!"]] | polars into-df | polars select (polars col text | polars str-strip-chars --end "!") | polars collect"#,
+                example: r#"[[text]; ["hello!!!"] ["world!!!"] ["test!!!"]] | polars_dyn into-df | polars_dyn select (polars_dyn col text | polars_dyn str-strip-chars --end "!") | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(
@@ -113,7 +113,7 @@ impl PluginCommand for StrStripChars {
             },
             Example {
                 description: "Strip characters from start of strings in a column",
-                example: r#"[[text]; ["!!!hello"] ["!!!world"] ["!!!test"]] | polars into-df | polars select (polars col text | polars str-strip-chars --start "!") | polars collect"#,
+                example: r#"[[text]; ["!!!hello"] ["!!!world"] ["!!!test"]] | polars_dyn into-df | polars_dyn select (polars_dyn col text | polars_dyn str-strip-chars --start "!") | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

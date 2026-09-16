@@ -14,7 +14,7 @@ impl PluginCommand for SelectorArray {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector array"
+        "polars_dyn selector array"
     }
 
     fn description(&self) -> &str {
@@ -36,12 +36,12 @@ impl PluginCommand for SelectorArray {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
-                example: "polars selector array",
+                example: "polars_dyn selector array",
                 description: "Create a selector for all array columns",
                 result: None,
             },
             Example {
-                example: "polars selector array --width 3",
+                example: "polars_dyn selector array --width 3",
                 description: "Create a selector for fixed-width arrays of size 3",
                 result: None,
             },

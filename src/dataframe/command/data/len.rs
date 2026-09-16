@@ -13,7 +13,7 @@ impl PluginCommand for ExprLen {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars len"
+        "polars_dyn len"
     }
 
     fn description(&self) -> &str {
@@ -30,7 +30,7 @@ impl PluginCommand for ExprLen {
         vec![
             Example {
                 description: "Count the number of rows in the dataframe.",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars select (polars len) | polars collect",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn select (polars_dyn len) | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new("len".to_string(), vec![Value::test_int(2)])],
@@ -43,7 +43,7 @@ impl PluginCommand for ExprLen {
             },
             Example {
                 description: "Creates a last expression from a column",
-                example: "polars col a | polars last",
+                example: "polars_dyn col a | polars_dyn last",
                 result: None,
             },
         ]

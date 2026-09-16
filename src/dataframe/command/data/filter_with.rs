@@ -20,7 +20,7 @@ impl PluginCommand for FilterWith {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars filter-with"
+        "polars_dyn filter-with"
     }
 
     fn description(&self) -> &str {
@@ -51,8 +51,8 @@ impl PluginCommand for FilterWith {
         vec![
             Example {
                 description: "Filter dataframe using a bool mask",
-                example: r#"let mask = ([true false] | polars into-df);
-    [[a b]; [1 2] [3 4]] | polars into-df | polars filter-with $mask"#,
+                example: r#"let mask = ([true false] | polars_dyn into-df);
+    [[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn filter-with $mask"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -68,7 +68,7 @@ impl PluginCommand for FilterWith {
             },
             Example {
                 description: "Filter dataframe using an expression",
-                example: "[[a b]; [1 2] [3 4]] | polars into-df | polars filter-with ((polars col a) > 1)",
+                example: "[[a b]; [1 2] [3 4]] | polars_dyn into-df | polars_dyn filter-with ((polars_dyn col a) > 1)",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

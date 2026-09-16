@@ -16,7 +16,7 @@ impl PluginCommand for ExprVar {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars var"
+        "polars_dyn var"
     }
 
     fn description(&self) -> &str {
@@ -50,7 +50,7 @@ impl PluginCommand for ExprVar {
         vec![
             Example {
                 description: "Var value from columns in a dataframe or aggregates columns to their var value",
-                example: "[[a b]; [6 2] [4 2] [2 2]] | polars into-df | polars var | polars collect",
+                example: "[[a b]; [6 2] [4 2] [2 2]] | polars_dyn into-df | polars_dyn var | polars_dyn collect",
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -67,11 +67,11 @@ impl PluginCommand for ExprVar {
             Example {
                 description: "Var aggregation for a group-by",
                 example: r#"[[a b]; [one 2] [one 2] [two 1] [two 1]]
-                    | polars into-df
-                    | polars group-by a
-                    | polars agg (polars col b | polars var)
-                    | polars collect
-                    | polars sort-by a"#,
+                    | polars_dyn into-df
+                    | polars_dyn group-by a
+                    | polars_dyn agg (polars_dyn col b | polars_dyn var)
+                    | polars_dyn collect
+                    | polars_dyn sort-by a"#,
                 result: Some(
                     NuDataFrame::from(
                         df!(

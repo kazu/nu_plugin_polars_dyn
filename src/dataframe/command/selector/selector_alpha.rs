@@ -17,7 +17,7 @@ impl PluginCommand for SelectorAlpha {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector alpha"
+        "polars_dyn selector alpha"
     }
 
     fn description(&self) -> &str {
@@ -43,10 +43,10 @@ impl PluginCommand for SelectorAlpha {
                     "hmm": ["aaa", "bbb", "ccc"],
                     "都市": ["東京", "大阪", "京都"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alpha) |
-                polars sort-by  café hmm 都市 |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alpha) |
+                polars_dyn sort-by  café hmm 都市 |
+                polars_dyn collect
                 "#,
                 description: "Select columns with alphabetic names; note that accented characters and kanji are recognised as alphabetic here.",
                 result: Some(
@@ -70,9 +70,9 @@ impl PluginCommand for SelectorAlpha {
                     "hmm": ["aaa", "bbb", "ccc"],
                     "都市": ["東京", "大阪", "京都"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alpha --ascii-only) |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alpha --ascii-only) |
+                polars_dyn collect
                 "#,
                 description: r#"Constrain the definition of "alphabetic" to ASCII characters only."#,
                 result: Some(
@@ -94,10 +94,10 @@ impl PluginCommand for SelectorAlpha {
                     "hmm": ["aaa", "bbb", "ccc"],
                     "都市": ["東京", "大阪", "京都"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alpha --ascii-only --ignore-spaces) |
-                polars sort-by  "t or f" hmm |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alpha --ascii-only --ignore-spaces) |
+                polars_dyn sort-by  "t or f" hmm |
+                polars_dyn collect
                 "#,
                 description: r#"Constrain the definition of "alphabetic" to ASCII characters only and ignore whitespace."#,
                 result: Some(
@@ -120,10 +120,10 @@ impl PluginCommand for SelectorAlpha {
                     "hmm": ["aaa", "bbb", "ccc"],
                     "都市": ["東京", "大阪", "京都"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alpha | polars selector not) |
-                polars sort-by no1 "t or f"|
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alpha | polars_dyn selector not) |
+                polars_dyn sort-by no1 "t or f"|
+                polars_dyn collect
                 "#,
                 description: r#"Select all columns *except* for those with alphabetic names."#,
                 result: Some(
@@ -146,10 +146,10 @@ impl PluginCommand for SelectorAlpha {
                     "hmm": ["aaa", "bbb", "ccc"],
                     "都市": ["東京", "大阪", "京都"],
                 } |
-                polars into-df --as-columns |
-                polars select (polars selector alpha --ignore-spaces | polars selector not) |
-                polars sort-by no1 |
-                polars collect
+                polars_dyn into-df --as-columns |
+                polars_dyn select (polars_dyn selector alpha --ignore-spaces | polars_dyn selector not) |
+                polars_dyn sort-by no1 |
+                polars_dyn collect
                 "#,
                 description: r#"Select all columns *except* for those with alphabetic names and do not have spaces."#,
                 result: Some(

@@ -14,7 +14,7 @@ impl PluginCommand for SelectorAll {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector all"
+        "polars_dyn selector all"
     }
 
     fn description(&self) -> &str {
@@ -34,15 +34,15 @@ impl PluginCommand for SelectorAll {
         vec![
             Example {
                 description: "Create a selector for all columns",
-                example: "polars selector all",
+                example: "polars_dyn selector all",
                 result: None,
             },
             Example {
                 description: "Multiply all columns by 2 using with-column",
                 example: r#"[[a b]; [1 2] [3 4]]
-                    | polars into-df
-                    | polars with-column ((polars selector all) * 2)
-                    | polars collect"#,
+                    | polars_dyn into-df
+                    | polars_dyn with-column ((polars_dyn selector all) * 2)
+                    | polars_dyn collect"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![

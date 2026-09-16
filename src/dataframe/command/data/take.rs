@@ -16,7 +16,7 @@ impl PluginCommand for TakeDF {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars take"
+        "polars_dyn take"
     }
 
     fn description(&self) -> &str {
@@ -47,9 +47,9 @@ impl PluginCommand for TakeDF {
         vec![
             Example {
                 description: "Takes selected rows from dataframe",
-                example: r#"let df = ([[a b]; [4 1] [5 2] [4 3]] | polars into-df);
-    let indices = ([0 2] | polars into-df);
-    $df | polars take $indices"#,
+                example: r#"let df = ([[a b]; [4 1] [5 2] [4 3]] | polars_dyn into-df);
+    let indices = ([0 2] | polars_dyn into-df);
+    $df | polars_dyn take $indices"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![
@@ -71,9 +71,9 @@ impl PluginCommand for TakeDF {
             },
             Example {
                 description: "Takes selected rows from series",
-                example: r#"let series = ([4 1 5 2 4 3] | polars into-df);
-    let indices = ([0 2] | polars into-df);
-    $series | polars take $indices"#,
+                example: r#"let series = ([4 1 5 2 4 3] | polars_dyn into-df);
+    let indices = ([0 2] | polars_dyn into-df);
+    $series | polars_dyn take $indices"#,
                 result: Some(
                     NuDataFrame::try_from_columns(
                         vec![Column::new(

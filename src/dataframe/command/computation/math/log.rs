@@ -17,7 +17,7 @@ impl PluginCommand for ExprMathLog {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math log"
+        "polars_dyn math log"
     }
 
     fn description(&self) -> &str {
@@ -48,9 +48,9 @@ impl PluginCommand for ExprMathLog {
         vec![Example {
             description: "Compute the base-2 logarithm of a column",
             example: "[[a]; [0] [1] [2] [4] [8] [16]] | 
-    polars into-df | 
-    polars select (polars col a | polars math log 2 | polars as a_base2) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col a | polars_dyn math log 2 | polars_dyn as a_base2) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!("a_base2" => [f64::NEG_INFINITY, 0.0, 1.0, 2.0, 3.0, 4.0])

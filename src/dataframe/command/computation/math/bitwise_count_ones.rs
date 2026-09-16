@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathBitwiseCountOnes {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math bitwise-count-ones"
+        "polars_dyn math bitwise-count-ones"
     }
 
     fn description(&self) -> &str {
@@ -44,9 +44,9 @@ impl PluginCommand for ExprMathBitwiseCountOnes {
         vec![Example {
             description: "Count the number of set bits for each element in an integer column",
             example: "[[n]; [0] [1] [7] [255]] | 
-    polars into-df | 
-    polars select (polars col n | polars math bitwise-count-ones) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col n | polars_dyn math bitwise-count-ones) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!(

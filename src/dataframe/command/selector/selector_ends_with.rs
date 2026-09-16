@@ -18,7 +18,7 @@ impl PluginCommand for SelectorEndsWith {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector ends-with"
+        "polars_dyn selector ends-with"
     }
 
     fn description(&self) -> &str {
@@ -45,10 +45,10 @@ impl PluginCommand for SelectorEndsWith {
         "baz": [2.0, 5.5],
         "zap": [false, true],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector ends-with z) |
-    polars sort-by baz |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector ends-with z) |
+    polars_dyn sort-by baz |
+    polars_dyn collect"#,
                 description: "Match columns ending with a 'z'",
                 result: Some(
                     NuDataFrame::from(
@@ -67,10 +67,10 @@ impl PluginCommand for SelectorEndsWith {
         "baz": [2.0, 5.5],
         "zap": [false, true],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector ends-with z r) |
-    polars sort-by bar baz |
-    polars collect "#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector ends-with z r) |
+    polars_dyn sort-by bar baz |
+    polars_dyn collect "#,
                 description: "Match columns ending with *either* the letter 'z' or 'r'",
                 result: Some(
                     NuDataFrame::from(
@@ -90,10 +90,10 @@ impl PluginCommand for SelectorEndsWith {
         "baz": [2.0, 5.5],
         "zap": [false, true],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector ends-with z | polars selector not) |
-    polars sort-by foo bar zap |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector ends-with z | polars_dyn selector not) |
+    polars_dyn sort-by foo bar zap |
+    polars_dyn collect"#,
                 description: "Match columns ending with *except* the letter 'z'",
                 result: Some(
                     NuDataFrame::from(

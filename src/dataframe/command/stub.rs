@@ -10,7 +10,7 @@ impl PluginCommand for PolarsCmd {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars"
+        "polars_dyn"
     }
 
     fn description(&self) -> &str {
@@ -18,7 +18,7 @@ impl PluginCommand for PolarsCmd {
     }
 
     fn signature(&self) -> nu_protocol::Signature {
-        Signature::build("polars")
+        Signature::build("polars_dyn")
             .category(Category::Custom("dataframe".into()))
             .input_output_types(vec![(Type::Nothing, Type::String)])
     }
@@ -33,11 +33,11 @@ Lazy and Strict dataframes (called `NuLazyFrame` and `NuDataFrame` in error mess
 data structure.
 
 Expressions, representing various column operations (called `NuExpression`), are passed to many commands such as
-`polars filter` or `polars with-column`. Most nushell operators are supported in these expressions, importantly
+`polars_dyn filter` or `polars_dyn with-column`. Most nushell operators are supported in these expressions, importantly
 arithmetic, comparison and boolean logical.
 
-Groupbys (`NuLazyGroupBy`), the output of a `polars group-by`, represent a grouped dataframe and are typically piped
-to the `polars agg` command with some column expressions for aggregation which then returns a dataframe.
+Groupbys (`NuLazyGroupBy`), the output of a `polars_dyn group-by`, represent a grouped dataframe and are typically piped
+to the `polars_dyn agg` command with some column expressions for aggregation which then returns a dataframe.
 "#
     }
 

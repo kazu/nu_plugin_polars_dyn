@@ -16,7 +16,7 @@ impl PluginCommand for SelectorInteger {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars selector integer"
+        "polars_dyn selector integer"
     }
 
     fn description(&self) -> &str {
@@ -37,10 +37,10 @@ impl PluginCommand for SelectorInteger {
         "baz": [2.0, 5.5],
         "zap": [0, 0],
     } |
-    polars into-df --as-columns |
-    polars select (polars selector integer) |
-    polars sort-by bar zap |
-    polars collect"#,
+    polars_dyn into-df --as-columns |
+    polars_dyn select (polars_dyn selector integer) |
+    polars_dyn sort-by bar zap |
+    polars_dyn collect"#,
             description: "Select all integer columns",
             result: Some(
                 NuDataFrame::from(

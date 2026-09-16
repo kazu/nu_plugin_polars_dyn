@@ -14,7 +14,7 @@ impl PluginCommand for ExprMathBitwiseTrailingOnes {
     type Plugin = PolarsPlugin;
 
     fn name(&self) -> &str {
-        "polars math bitwise-trailing-ones"
+        "polars_dyn math bitwise-trailing-ones"
     }
 
     fn description(&self) -> &str {
@@ -44,9 +44,9 @@ impl PluginCommand for ExprMathBitwiseTrailingOnes {
         vec![Example {
             description: "Count the number of trailing set bits for each element in an integer column",
             example: "[[n]; [0] [1] [3] [7]] | 
-    polars into-df | 
-    polars select (polars col n | polars math bitwise-trailing-ones) | 
-    polars collect",
+    polars_dyn into-df | 
+    polars_dyn select (polars_dyn col n | polars_dyn math bitwise-trailing-ones) | 
+    polars_dyn collect",
             result: Some(
                 NuDataFrame::from(
                     df!(
