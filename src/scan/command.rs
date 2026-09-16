@@ -7,6 +7,7 @@ use nu_protocol::{
 use crate::{
     PolarsPlugin,
     command::core::resource::Resource,
+    nu_serde::to_serde_value,
     values::{CustomValueSupport, NuLazyFrame, PolarsPluginType},
 };
 
@@ -140,36 +141,5 @@ fn no_source_error(plugin: &PolarsPlugin, what: &str, span: Span) -> ShellError 
 /// Encodes a `--opts` record as JSON. Supports bool, int, float, string, nothing, list and
 /// record; anything else is a type error.
 fn to_json(value: &Value) -> Result<serde_json::Value, ShellError> {
-    let json = match value {
-        Value::Bool { val, .. } => serde_json::Value::Bool(*val),
-        Value::Int { val, .. } => serde_json::Value::from(*val),
-        Value::Float { val, .. } => serde_json::Number::from_f64(*val)
-            .map(serde_json::Value::Number)
-            .ok_or_else(|| unsupported_opt(value, "a finite float"))?,
-        Value::String { val, .. } => serde_json::Value::String(val.clone()),
-        Value::Nothing { .. } => serde_json::Value::Null,
-        Value::List { vals, .. } => {
-            serde_json::Value::Array(vals.iter().map(to_json).collect::<Result<_, _>>()?)
-        }
-        Value::Record { val, .. } => serde_json::Value::Object(
-            val.iter()
-                .map(|(k, v)| Ok((k.clone(), to_json(v)?)))
-                .collect::<Result<_, ShellError>>()?,
-        ),
-        _ => {
-            return Err(unsupported_opt(
-                value,
-                "bool, int, float, string, nothing, list or record",
-            ));
-        }
-    };
-    Ok(json)
-}
-
-fn unsupported_opt(value: &Value, expected: &str) -> ShellError {
-    ShellError::Generic(GenericError::new(
-        format!("--opts expects {expected}"),
-        format!("found {}", value.get_type()),
-        value.span(),
-    ))
+    to_serde_value(value, "--opts")
 }

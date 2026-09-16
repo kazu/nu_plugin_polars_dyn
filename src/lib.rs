@@ -16,7 +16,9 @@ use command::{
 use nu_plugin::{EngineInterface, Plugin, PluginCommand};
 
 mod cache;
+pub mod call;
 pub mod dataframe;
+mod nu_serde;
 pub mod scan;
 pub use dataframe::*;
 use nu_protocol::{
@@ -78,6 +80,7 @@ impl Plugin for PolarsPlugin {
         commands.append(&mut string_commands());
         commands.append(&mut list_commands());
         commands.push(Box::new(scan::Open));
+        commands.push(Box::new(call::Call));
 
         commands.append(&mut cache_commands());
         commands
