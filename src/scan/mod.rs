@@ -2,12 +2,14 @@
 //!
 //! A [`ScanSource`] turns a source string and an options blob into a `LazyFrame`. The
 //! [`ScanRegistry`] holds the sources the bin registers at plugin construction and picks one by
-//! name or by the longest matching suffix. The built-in parquet / csv / ipc / ndjson sources are
-//! in [`builtin`].
+//! name or by the longest matching suffix. The built-in sources — parquet, csv, ipc and ndjson as
+//! polars reads them, and the `.seek.zst` pair of [`seek_zst_builtin`] — are in [`builtin`].
 
 pub mod builtin;
 mod command;
 mod opts;
+pub mod seek_zst;
+pub mod seek_zst_builtin;
 
 pub use command::Open;
 pub use opts::{overlay_opts, parse_opts};
@@ -25,7 +27,7 @@ pub trait ScanSource: Send + Sync {
     fn name(&self) -> &'static str;
 
     /// Suffixes matched against the end of the source string when `--format` is absent, longest
-    /// match first across all sources. Each must start with `.`, e.g. `[".logfmt", ".logfmt.zst"]`.
+    /// match first across all sources. Each must start with `.`, e.g. `[".logfmt", ".logfmt.seek.zst"]`.
     fn suffixes(&self) -> &'static [&'static str];
 
     /// Builds a `LazyFrame` over `source` without collecting it. `source` is an absolute local

@@ -1,4 +1,7 @@
-//! The sources polars reads by itself: parquet, csv, ipc and ndjson.
+//! The sources every bin registers: parquet, csv, ipc and ndjson as polars reads them, and the
+//! `.seek.zst` sources of [`super::seek_zst_builtin`] beside them.
+//!
+//! The four below are the ones polars reads by itself.
 //!
 //! Their `--opts` record is the format's own option struct at the top level, with polars'
 //! `UnifiedScanArgs` (`cloud_options`, `hive_options`, `glob`, `row_index`, `pre_slice`, ...)
@@ -25,7 +28,14 @@ use super::{
 };
 
 /// The sources every bin registers.
-pub static BUILTIN: &[&dyn ScanSource] = &[&Parquet, &Csv, &Ipc, &NdJson];
+pub static BUILTIN: &[&dyn ScanSource] = &[
+    &Parquet,
+    &Csv,
+    &Ipc,
+    &NdJson,
+    &super::seek_zst_builtin::CsvSeekZst,
+    &super::seek_zst_builtin::NdJsonSeekZst,
+];
 
 pub struct Parquet;
 pub struct Csv;
@@ -108,7 +118,7 @@ impl ScanSource for NdJson {
 
 /// The values `LazyJsonLineReader::new` starts from. `NDJsonReadOptions` has no `Default` and
 /// polars offers no builder from it to a plan, so the defaults are repeated here.
-fn ndjson_defaults() -> NDJsonReadOptions {
+pub(super) fn ndjson_defaults() -> NDJsonReadOptions {
     const CHUNK_SIZE: NonZeroUsize = NonZeroUsize::new(1 << 18).expect("1 << 18 is not zero");
     NDJsonReadOptions {
         n_threads: None,

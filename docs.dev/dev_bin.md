@@ -1,7 +1,8 @@
 # `dev/` bin: logfmt を compile-in した plugin
 
 `polars_dyn open x.logfmt` を動かすための、publish しない bin。published crate(root)は
-`polars_logfmt` に依存せず built-in の parquet / csv / ipc / ndjson だけを登録する。
+`polars_logfmt` に依存せず built-in の parquet / csv / ipc / ndjson と `.csv.seek.zst` /
+`.ndjson.seek.zst`(と `.jsonl.seek.zst`)だけを登録する。
 `dev/` は同じ lib に `polars_logfmt` を path 依存で足し、`logfmt` を scan registry に登録して
 `serve_plugin` する。設計は [agreements.md](./agreements.md)「`Cargo.toml` の独立と polars 版」。
 logfmt が `.so` 経由で呼べるようになったら `dev/` は消す。

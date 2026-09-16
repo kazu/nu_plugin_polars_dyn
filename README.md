@@ -4,7 +4,8 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
 `nu_plugin_polars` の fork で、Python 無しで polars をシェルから使う。本家との違い:
 
 - コマンド接頭辞は `polars_dyn`(本家の `polars` と同時に登録できる)。
-- `polars_dyn open` は scan source の registry を通す。built-in は parquet / csv / ipc / ndjson で、
+- `polars_dyn open` は scan source の registry を通す。built-in は parquet / csv / ipc / ndjson と、
+  seekable zstd の `.csv.seek.zst` / `.ndjson.seek.zst`(`.jsonl.seek.zst` も同じ)で、
   読み込みオプションは `--opts` の record で渡す。
 - `polars_dyn call` で polars の expression plugin(`.so`)の関数を呼ぶ。
 - `polars_dyn collect --streaming` で streaming エンジンを選べる。
