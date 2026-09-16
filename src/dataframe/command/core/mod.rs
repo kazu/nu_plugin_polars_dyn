@@ -1,8 +1,7 @@
 mod cache;
 mod columns;
-mod open;
 mod profile;
-mod resource;
+pub(crate) mod resource;
 mod save;
 mod schema;
 mod shape;
@@ -14,7 +13,6 @@ mod to_nu;
 mod to_repr;
 mod to_schema;
 
-pub use self::open::OpenDataFrame;
 use crate::PolarsPlugin;
 use nu_plugin::PluginCommand;
 pub use schema::SchemaCmd;
@@ -29,7 +27,6 @@ pub(crate) fn core_commands() -> Vec<Box<dyn PluginCommand<Plugin = PolarsPlugin
     vec![
         Box::new(columns::ColumnsDF),
         Box::new(cache::LazyCache),
-        Box::new(OpenDataFrame),
         Box::new(profile::ProfileDF),
         Box::new(Summary),
         Box::new(ShapeDF),

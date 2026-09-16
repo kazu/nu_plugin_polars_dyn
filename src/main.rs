@@ -11,7 +11,7 @@ fn main() {
         // See https://docs.rs/polars/latest/polars/#user-guide for details
         std::env::set_var("POLARS_ALLOW_EXTENSION", "true");
     }
-    match PolarsPlugin::new() {
+    match PolarsPlugin::new(nu_plugin_polars::scan::builtin::BUILTIN) {
         Ok(ref plugin) => serve_plugin(plugin, MsgPackSerializer {}),
         Err(e) => {
             eprintln!("{e}");

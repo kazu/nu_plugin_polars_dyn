@@ -293,7 +293,7 @@ pub(crate) mod test {
 
     fn tmp_dir_sandbox() -> Result<(TempDir, PluginTest), Box<dyn std::error::Error>> {
         let tmp_dir = tempfile::tempdir()?;
-        let mut plugin_test = PluginTest::new("polars", PolarsPlugin::new()?.into())?;
+        let mut plugin_test = PluginTest::new("polars", PolarsPlugin::new_test_mode()?.into())?;
         plugin_test.engine_state_mut().add_env_var(
             "PWD".to_string(),
             Value::string(

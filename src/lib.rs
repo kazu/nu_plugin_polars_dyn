@@ -17,50 +17,31 @@ use nu_plugin::{EngineInterface, Plugin, PluginCommand};
 
 mod cache;
 pub mod dataframe;
+pub mod scan;
 pub use dataframe::*;
 use nu_protocol::{
     CustomValue, LabeledError, ShellError, Span, Spanned, Value, ast::Operator, casing::Casing,
     shell_error::generic::GenericError,
 };
+use scan::{ScanRegistry, ScanSource};
 use values::CustomValueType;
 
 use crate::values::PolarsPluginCustomValue;
 
-pub trait EngineWrapper {
-    fn get_env_var(&self, key: &str) -> Option<String>;
-    fn use_color(&self) -> bool;
-}
-
-impl EngineWrapper for &EngineInterface {
-    fn get_env_var(&self, key: &str) -> Option<String> {
-        EngineInterface::get_env_var(self, key)
-            .ok()
-            .flatten()
-            .map(|x| match x {
-                Value::String { val, .. } => val,
-                _ => "".to_string(),
-            })
-    }
-
-    fn use_color(&self) -> bool {
-        self.get_config()
-            .ok()
-            .and_then(|config| config.color_config.get("use_color").cloned())
-            .unwrap_or(Value::bool(false, Span::unknown()))
-            .is_true()
-    }
-}
-
 pub struct PolarsPlugin {
     pub(crate) cache: Cache,
     gc_disabled: OnceLock<()>,
+    pub(crate) scan_registry: ScanRegistry,
 }
 
 impl PolarsPlugin {
-    pub fn new() -> Result<Self, ShellError> {
+    /// Builds the plugin with the scan sources `polars_dyn open` can use. Fails when two
+    /// sources share a name or a suffix.
+    pub fn new(sources: &'static [&'static dyn ScanSource]) -> Result<Self, ShellError> {
         Ok(Self {
             cache: Cache::default(),
             gc_disabled: OnceLock::new(),
+            scan_registry: ScanRegistry::new(sources)?,
         })
     }
 
@@ -96,6 +77,7 @@ impl Plugin for PolarsPlugin {
         commands.append(&mut selector_commands());
         commands.append(&mut string_commands());
         commands.append(&mut list_commands());
+        commands.push(Box::new(scan::Open));
 
         commands.append(&mut cache_commands());
         commands
@@ -291,7 +273,7 @@ pub mod test {
     impl PolarsPlugin {
         /// Creates a new polars plugin in test mode
         pub fn new_test_mode() -> Result<Self, ShellError> {
-            PolarsPlugin::new()
+            PolarsPlugin::new(scan::builtin::BUILTIN)
         }
     }
 
