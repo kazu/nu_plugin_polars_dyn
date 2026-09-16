@@ -3,6 +3,16 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Map, Value};
 
 /// Parses the `--opts` bytes as a JSON object. Empty bytes are an empty object.
+///
+/// ```
+/// # fn main() -> polars::prelude::PolarsResult<()> {
+/// use nu_plugin_polars::scan::parse_opts;
+/// assert!(parse_opts(b"")?.is_empty());
+/// assert_eq!(parse_opts(br#"{"batch_size": 10}"#)?["batch_size"], 10);
+/// assert!(parse_opts(b"[1]").is_err());
+/// # Ok(())
+/// # }
+/// ```
 pub fn parse_opts(opts: &[u8]) -> PolarsResult<Map<String, Value>> {
     if opts.is_empty() {
         return Ok(Map::new());

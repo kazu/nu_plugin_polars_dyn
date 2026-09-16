@@ -1,5 +1,5 @@
 [workspace]
-members = ["tests/expr_plugin"]
+members = ["tests/expr_plugin", "dev"]
 
 [package]
 authors = ["Kazuhisa TAKEI <kazuhisa@gmail.com>"]
