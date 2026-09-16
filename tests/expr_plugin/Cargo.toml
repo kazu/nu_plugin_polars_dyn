@@ -15,7 +15,7 @@ doctest = false
 polars-arrow = "=0.55.2"
 polars-core = "=0.55.2"
 polars-ffi = "=0.55.2"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "=1.0.229", features = ["derive"] }
 serde-pickle = "1.2.0"
 
 [lints.clippy]

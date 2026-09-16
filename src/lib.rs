@@ -18,7 +18,7 @@ use nu_plugin::{EngineInterface, Plugin, PluginCommand};
 mod cache;
 pub mod call;
 pub mod dataframe;
-pub mod nu_serde;
+mod nu_serde;
 pub mod scan;
 pub use dataframe::*;
 use nu_protocol::{
