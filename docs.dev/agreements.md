@@ -59,7 +59,7 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
 - `source` は文字列をそのまま実装に渡す(ローカルパス、URL、logfmt の ssh 指定など)。
   nu 側では解釈しない。
 - `--format` が無ければ、各実装が宣言する接尾辞の最長一致で決める
-  (`app.logfmt.zst` → `logfmt`、`x.parquet` → `parquet`)。決まらなければ登録名を
+  (`app.logfmt.seek.zst` → `logfmt`、`x.parquet` → `parquet`)。決まらなければ登録名を
   列挙してエラー。
 - `--opts` は record を JSON bytes にして実装へ渡す。中身は実装ごとの契約で、nu 側は
   覗かない。省略時は空。形式固有の flag(`--delimiter` 等)は付けない。`--eager` も
@@ -69,15 +69,18 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
   ```rust
   pub trait ScanSource: Send + Sync {
       fn name(&self) -> &'static str;                 // "logfmt"
-      fn suffixes(&self) -> &'static [&'static str];  // [".logfmt", ".logfmt.zst"]
+      fn suffixes(&self) -> &'static [&'static str];  // [".logfmt", ".logfmt.seek.zst"]
       fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame>;
   }
   ```
 
 - registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in の
-  parquet / csv / ipc / ndjson も同じ trait の実装で、`--opts` の JSON を `polars-io` の
+  parquet / csv / ipc / ndjson と `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst`
+  (「seekzstdsep を圧縮層として挟む」の節)も同じ trait の実装で、`--opts` の JSON を `polars-io` の
   オプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を derive
-  している)に直接食わせる。形式ごとの flag 解析を fork には持たない。`logfmt` は
+  している)に直接食わせる。形式ごとの flag 解析を fork には持たない。`.seek.zst` の 2 つは
+  そのうち frame ごとに読むと意味が変わるもの(行や列をファイルから取り出す、列に名前を付ける)を
+  エラーにする — 詳細は「seekzstdsep を圧縮層として挟む」の節。`logfmt` は
   `dev/` の bin だけが登録する。接尾辞の衝突は構築時に 1 回検査する。
 - logfmt の `opts` は serde struct(`line_filter` は closure を渡せないので部分文字列)。
 - 採らなかった案: source ごとの named flag(`open` の分岐を作り直すことになる)、
@@ -134,7 +137,7 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
   も併存して効く。採らなかった案: デフォルトを streaming にする(未対応ノードがエラーになる)、
   全コマンドに flag を撒く(先に `collect --streaming` を挟めば足りる)、環境変数だけに頼る
   (プロセス全体に効いて暗黙の collect も巻き込む)。
-  `AnonymousScan` で書かれた source(logfmt、将来の seekzstdsep)は streaming で collect
+  `AnonymousScan` で書かれた source(logfmt、seek.zst の frame 層)は streaming で collect
   **できない**。polars-stream 0.55.2 は `FileScanIR::Anonymous` を `todo!("unimplemented:
   AnonymousScan")` で落とす(0.52 から変わっていない)。plugin はその panic を捕まえて
   「`collecting on the streaming engine: not yet implemented: unimplemented: AnonymousScan`」の
@@ -212,28 +215,69 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 - 本家のソース内テスト(`#[cfg(test)]`)。移す手間は差分を増やすだけ。fork で新しく書く
   テストだけ `tests/` に置く。
 
-## 将来: seekzstdsep を圧縮層として挟む
+## seekzstdsep を圧縮層として挟む
 
 polars は csv / ndjson の圧縮ファイルを全体展開してからしか読めない(seek 不可、展開は単一
-スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。logfmt の結線
-(task 007)が終わってから、次の 3 段で進める。
+スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。seekable zstd の frame を
+単位に読む層を 1 つ作り、その上に csv / ndjson のパーサを載せる。
 
-1. **seekzstdsep 側**に汎用の `AnonymousScan` を作る。frame index、`n_rows` / slice → frame
-   範囲の写像、frame ごとの展開、rayon の frame 並列、chunk の連結を持つ。パーサは
-   「1 frame の `&[u8]` と `with_columns` → `DataFrame`」と「schema」の 2 関数を注入する
-   (frame 境界 = レコード境界なので、パーサは frame をまたぐ状態を持たない)。入力は
-   `Read + Seek` の trait object で、ssh の VFS はこの層の下に置く。polars に依存するので
-   `seekzstdsep` 本体(publish 済、polars 非依存)ではなく**隣の別 crate**にする。
-   predicate pushdown は後から frame の DataFrame に `Expr` を当てる形で足せる。
-2. **logfmt 側**は行パーサ・schema 推論・`line_filter` だけを残し、`LazyLogFmtReader` /
-   `LogFmtReaderState` / `next_batch` / 並列化と `AnonymousScan` 実装を消す。
-3. **fork 側**は registry の `.csv.zstsep` / `.ndjson.zstsep` / `.logfmt.zstsep` を 1 つの
-   `ScanSource` に登録し、残りの接尾辞でパーサを選ぶ。csv / ndjson のパーサは polars 標準の
-   reader を `Cursor` に当てるだけ。
+接尾辞は `.seek.zst`。seekzstdsep は元の名前を残して `<元の名前>.seek.zst` を作るので
+(`seekzstdsep compress events.jsonl` → `events.jsonl.seek.zst`)、`.csv.seek.zst` /
+`.ndjson.seek.zst` が「接尾辞の最長一致でパーサを選ぶ」registry の設計とそのまま噛み合う。
+素の `.zst`(seek 不可、polars が全体展開)は登録しない。`polars_dyn open x.csv.zst` は
+登録名の列挙エラーになる。
 
-未決: 非圧縮ファイル(素の `.log`、ssh 越しの plain)を frame 走査に乗せるか
-(改行で切った固定長 window を frame と見なす入力実装を足す)、zstsep に変換してから読むことに
-するか。kazu の運用で決める。
+1. **frame 層は fork の `src/scan/` に置く。** frame ごとの読み出し、rayon の frame 並列、
+   chunk の連結を持つ。パーサは「1 frame の `&[u8]` と frame 番号と schema → `DataFrame`」と
+   「schema」の 2 関数を注入する(frame 境界 = レコード境界なので、パーサは frame をまたぐ
+   状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。
+   `seekzstdsep` は crates.io から exact semver で依存する。
+
+   `n_rows` は frame 範囲に写像しない。frame が何レコード持つかは読むまで分からないので、
+   frame のバッチ単位で読みながら行数が足りたところで打ち切る。`n_rows` はファイルの行に対する
+   指定なので、predicate より**先**に当てる(`slice 0 26 | filter ...` は「先頭 26 行のうち
+   条件に合うもの」)。
+
+   **predicate pushdown と projection pushdown は取る。**`n_rows` が無いときは predicate を
+   frame ごとの `DataFrame` に当てるので、全件を連結してから絞るのに比べてピークが小さい
+   (`n_rows` があるときは先に行を確定する必要があるので連結後に当てる)。ただし polars が押し込む式には
+   optimizer の内部表現にしか存在しないもの(`sort` + `slice` の動的 top-k)があり、これを
+   `LazyFrame::filter` に渡すとプロセスが落ちる。当てずに素通しする — その式は速くするための
+   境界で、答えの一部ではない(`Sort` が自分の slice を保持している)。
+2. **`.csv.seek.zst` / `.ndjson.seek.zst` を built-in の `ScanSource` として登録する。**
+   plain の ndjson が `.ndjson` と `.jsonl` を持つのに合わせ、`.jsonl.seek.zst` も同じ source に
+   登録する。
+   パーサは polars 標準の reader を `Cursor` に当てるだけ。`polars_dyn open` のコマンドは
+   変えない。
+
+   `--opts` も形式の option struct をトップレベルに置く形のままだが、**受ける集合は狭い**。
+   frame ごとに reader を作るので、ファイル全体を主語にするオプションは frame ごとに効いて
+   意味が変わる。次の 8 つはエラーにする(`polars_dyn slice` / `select` / `rename` が代わり、
+   行に番号を振るものには代わりが無い):
+
+   - 行を取り出す: `n_rows` / `skip_rows` / `skip_lines` / `skip_rows_after_header`
+   - 行に番号を振る: `row_index`
+   - 列を取り出す: `columns` / `projection`
+   - 列に名前を付ける: `column_names_overwrite`
+
+   `scan` キー(`UnifiedScanArgs`)も受けない。中身の大半は polars 自身の file scan のもので
+   anonymous scan には届かず、届くもの(`pre_slice` → `n_rows`、`projection` → 列)は
+   クエリ側が埋めるため。
+
+   残りは素通しするが、`infer_schema_length` は schema を決める frame 0 までしか見ない
+   (plain との差。詳細は `src/scan/seek_zst.rs` のモジュール doc)。
+
+採らなかった案: 汎用の frame 層を `seekzstdsep` の隣の crate として publish し、logfmt と
+fork の両方から使う。両方が依存できる場所はそこしかないので重複は消えるが、利用者が fork だけの
+crate を 1 本増やすことになる。logfmt は `.so` ロード(「scan の `.so` ロード」の節)で
+C ABI 越しの外部実装になり、そのとき fork の Rust の frame 層は link できない。外部実装が自前の
+frame 走査を持つのは重複ではなく境界の向こう側なので、この層は fork の中に閉じる。
+
+**非圧縮ファイルは frame 層で扱わない。** 素の `.csv` / `.ndjson` は polars の標準 scan が
+multi-threaded reader と projection / predicate pushdown 込みで読めるので、改行で切った固定長
+window を frame と見なす入力実装を足しても、polars より遅いものを 1 本増やすだけになる。
+logfmt は事情が違い(polars に logfmt reader が無い)、非圧縮の分割は polars-logfmt が
+自前で持っている。
 
 ## 作業の進め方
 
@@ -246,4 +290,3 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
 ## 未決の論点
 
 実装に入る範囲では無し。実装時に確認する事項は各節に「実装時に確認」「未検証」として残している。
-「将来: seekzstdsep を圧縮層として挟む」の非圧縮ファイルの扱いだけが未決で、着手時に決める。
