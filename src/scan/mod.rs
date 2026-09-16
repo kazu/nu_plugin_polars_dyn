@@ -10,7 +10,7 @@ mod command;
 mod opts;
 
 pub use command::Open;
-pub use opts::overlay_opts;
+pub use opts::{overlay_opts, parse_opts};
 
 use nu_protocol::{ShellError, shell_error::generic::GenericError};
 use polars::prelude::{LazyFrame, PolarsResult};
@@ -28,7 +28,8 @@ pub trait ScanSource: Send + Sync {
     /// match first across all sources. Each must start with `.`, e.g. `[".logfmt", ".logfmt.zst"]`.
     fn suffixes(&self) -> &'static [&'static str];
 
-    /// Builds a `LazyFrame` over `source` without collecting it. `opts` is the `--opts` record
+    /// Builds a `LazyFrame` over `source` without collecting it. `source` is an absolute local
+    /// path, or a URL with a scheme passed through untouched. `opts` is the `--opts` record
     /// encoded as JSON, or empty when the flag was omitted.
     fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame>;
 }

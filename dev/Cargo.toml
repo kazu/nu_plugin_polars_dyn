@@ -1,0 +1,26 @@
+[package]
+name = "nu_plugin_polars_dyn_dev"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+description = "nu_plugin_polars_dyn with polars_logfmt compiled in. Not published; see docs.dev/dev_bin.md."
+
+[[bin]]
+name = "nu_plugin_polars_dyn_dev"
+bench = false
+
+[dependencies]
+nu_plugin_polars = { package = "nu_plugin_polars_dyn", path = ".." }
+polars_logfmt = { path = "../../polars-logfmt/polars-logfmt" }
+nu-plugin = { version = "=0.114.1", default-features = false }
+polars = "=0.55.2"
+serde_json = "=1.0.151"
+env_logger = "=0.11.11"
+
+[dev-dependencies]
+seekzstdsep = "=0.5.0"
+tempfile = "=3.27.0"
+
+[lints.clippy]
+unwrap_used = "deny"
