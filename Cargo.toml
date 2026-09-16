@@ -94,6 +94,7 @@ features = [
   "serde",
   "serde-lazy",
   "sign",
+  "streaming",
   "strings",
   "string_to_integer",
   "timezones",

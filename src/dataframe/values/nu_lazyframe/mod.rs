@@ -67,7 +67,7 @@ impl NuLazyFrame {
         engine: Engine,
         span: Span,
     ) -> Result<NuDataFrame, ShellError> {
-        crate::handle_panic(
+        crate::handle_panic_with_message(
             || {
                 self.to_polars()
                     .collect_with_engine(engine)
@@ -84,6 +84,7 @@ impl NuLazyFrame {
                     })
                     .map(|df| NuDataFrame::new(true, df))
             },
+            &format!("collecting on the {engine} engine"),
             span,
         )
     }

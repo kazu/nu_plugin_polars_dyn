@@ -249,6 +249,7 @@ impl Plugin for PolarsPlugin {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn handle_panic<F, R>(f: F, span: Span) -> Result<R, ShellError>
 where
     F: FnOnce() -> Result<R, ShellError>,
@@ -260,6 +261,30 @@ where
             "",
             span,
         ))),
+    }
+}
+
+/// Runs `f` and turns a panic into a `ShellError` whose detail is the panic message, prefixed
+/// with `what`. polars-stream reports nodes it has not implemented with `todo!` instead of a
+/// `PolarsError`, so the message is the only place the user learns what was refused.
+pub(crate) fn handle_panic_with_message<F, R>(f: F, what: &str, span: Span) -> Result<R, ShellError>
+where
+    F: FnOnce() -> Result<R, ShellError>,
+{
+    match catch_unwind(AssertUnwindSafe(f)) {
+        Ok(inner_result) => inner_result,
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_default();
+            Err(ShellError::Generic(GenericError::new(
+                "Panic occurred",
+                format!("{what}: {message}"),
+                span,
+            )))
+        }
     }
 }
 
