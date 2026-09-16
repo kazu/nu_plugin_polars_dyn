@@ -1,5 +1,5 @@
 [workspace]
-members = []
+members = ["tests/expr_plugin"]
 
 [package]
 authors = ["Kazuhisa TAKEI <kazuhisa@gmail.com>"]
@@ -36,6 +36,7 @@ indexmap = { version = "2.13" }
 num = { version = "0.4" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.151"
+serde-pickle = "1.2.0"
 sqlparser = { version = "~0.61.0" }
 polars-io = { version = "~0.55.2", features = ["avro", "cloud", "aws", "azure", "gcp"] }
 polars-arrow = { version = "~0.55.2" }

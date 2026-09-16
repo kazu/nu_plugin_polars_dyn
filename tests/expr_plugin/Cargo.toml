@@ -1,0 +1,22 @@
+[package]
+name = "expr_plugin"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Minimal polars expression plugin used by the `polars_dyn call` integration tests."
+
+[lib]
+crate-type = ["cdylib"]
+bench = false
+test = false
+doctest = false
+
+[dependencies]
+polars-arrow = "=0.55.2"
+polars-core = "=0.55.2"
+polars-ffi = "=0.55.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-pickle = "1.2.0"
+
+[lints.clippy]
+unwrap_used = "deny"
