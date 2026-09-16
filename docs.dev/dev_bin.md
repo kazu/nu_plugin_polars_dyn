@@ -8,29 +8,33 @@ logfmt が `.so` 経由で呼べるようになったら `dev/` は消す。
 
 ## 構成
 
-- `dev/Cargo.toml` — workspace member、`publish = false`、
+- `dev/Cargo.toml` — **root とは別の workspace**(root の `[workspace] exclude`)、`publish = false`、
   `polars_logfmt = { path = "../../polars-logfmt/polars-logfmt" }`(同じ親ディレクトリに
-  `polars-logfmt` の checkout があること)。
+  `polars-logfmt` の checkout があること)。別 workspace にしてあるのは、`polars-logfmt` の
+  checkout が無い環境(GitHub Actions)でも root の workspace が読み込めるようにするため。
+  path 依存の member があると `cargo metadata` 自体が失敗し、`--exclude` では避けられない。
+  `dev/Cargo.lock` も commit する。
 - `dev/src/main.rs` — `BUILTIN` に `Logfmt` を足した slice を `PolarsPlugin::new` に渡すだけ。
 - `dev/src/logfmt.rs` — `ScanSource` の impl。`name = "logfmt"`、接尾辞 `.logfmt` / `.logfmt.zst`。
   `--opts` は `polars_logfmt::LogfmtScanOpts` の JSON(`line_filter` は部分文字列、`schema`、
   `batch_size`、`n_threads`、`aligned_cols_cnt`、ssh の `cmd`)。
-- `dev/tests/open_logfmt.rs` — `.logfmt` / `.logfmt.zst` の統合テスト。`cargo test --workspace`
-  で走る。
+- `dev/tests/open_logfmt.rs` — `.logfmt` / `.logfmt.zst` の統合テスト。
+  `cargo test --manifest-path dev/Cargo.toml` で走る(`toolkit test` が root と dev の両方を回す。
+  GitHub Actions は root だけ)。
 
 ## ビルドと登録
 
 bash / zsh:
 
 ```sh
-cargo build -p nu_plugin_polars_dyn_dev
+cargo build --manifest-path dev/Cargo.toml
 nu -c "plugin add $CARGO_TARGET_DIR/debug/nu_plugin_polars_dyn_dev"
 ```
 
 nushell:
 
 ```nu
-cargo build -p nu_plugin_polars_dyn_dev
+cargo build --manifest-path dev/Cargo.toml
 plugin add $"($env.CARGO_TARGET_DIR)/debug/nu_plugin_polars_dyn_dev"
 ```
 
