@@ -70,7 +70,7 @@ impl PluginCommand for ListDF {
                             "span_contents" =>  Value::string(span_contents, value.span),
                             "span_start" => Value::int(value.span.start as i64, call.head),
                             "span_end" => Value::int(value.span.end as i64, call.head),
-                            },
+                        },
                         call.head,
                     )))
                 }
