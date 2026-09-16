@@ -11,6 +11,9 @@ use crate::{
 };
 
 /// `polars_dyn open <source> [--format <name>] [--opts <record>]` → LazyFrame.
+///
+/// The output carries the source string as `DataSource::FilePath`, which `polars_dyn save`
+/// checks to refuse writing into the file a frame is still being read from.
 #[derive(Clone)]
 pub struct Open;
 
@@ -117,7 +120,6 @@ fn command(
         ))
     })?;
     let value = NuLazyFrame::from(lazy).cache_and_to_value(plugin, engine, call.head)?;
-    // `polars_dyn save` refuses to write into the file a frame is being read from.
     let metadata = PipelineMetadata::default()
         .with_data_source(DataSource::FilePath(spanned_source.item.into()));
     Ok(PipelineData::value(value, Some(metadata)))
