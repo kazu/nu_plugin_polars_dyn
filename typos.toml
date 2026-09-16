@@ -1,0 +1,6 @@
+[files]
+extend-exclude = []
+
+# `NdJson` / `NDJsonReadOptions` (polars and inherited code).
+[default.extend-words]
+nd = "nd"
