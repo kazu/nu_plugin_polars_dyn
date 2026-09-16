@@ -118,3 +118,11 @@ nu-command = { version = "=0.114.1", features = ["plugin"] }
 nu-plugin-test-support = "=0.114.1"
 
 tempfile = "3.27"
+
+[lints.clippy]
+format_push_string = "warn"
+needless_raw_strings = "allow"
+result_large_err = "allow"
+unchecked_time_subtraction = "warn"
+unwrap_used = "deny"
+used_underscore_binding = "warn"
