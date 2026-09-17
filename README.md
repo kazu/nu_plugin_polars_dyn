@@ -19,6 +19,7 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
   `src/bin/nu-polars-dyn-build.rs` がカスタムバイナリのビルダー。
 - `tests/` — `nu` を spawn する統合テスト。`tests/expr_plugin` は `polars_dyn call` 用の
   expression plugin、`tests/rows_scan` はカスタムバイナリ用の最小の scan source。
+- `docs/` — 利用者向けの手順。
 - `docs.dev/` — 設計の合意と作業規約。
 
 ## Install
@@ -48,26 +49,16 @@ polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | pola
 
 ## 自分の scan source を足す
 
-scan source は plugin に組み込まれる。足すにはバイナリを作り直すが、書くコードはゼロで、
-`nu-polars-dyn-build` が cargo project を生成してビルドする。
-
-組み込む crate は入口を 1 つ公開する。`ScanSource` の実装例は `tests/rows_scan/src/lib.rs`。
-
-```rust
-pub fn scan_sources() -> &'static [&'static dyn nu_plugin_polars::scan::ScanSource];
-```
+`polars_dyn open` が読める形式は増やせる。scan source は plugin に組み込まれるのでバイナリを
+作り直すが、書くのは scan source の crate だけで、cargo project も `main.rs` も
+`nu-polars-dyn-build` が生成する。
 
 ```nu
-# crates.io の crate なら名前だけ
-nu-polars-dyn-build my_scan_source
-# publish していない crate は取り方を渡す
 nu-polars-dyn-build my_scan_source --path my_scan_source=../my_scan_source
-nu-polars-dyn-build my_scan_source --git my_scan_source=https://example.invalid/my_scan_source
+plugin add ./nu_plugin_polars_dyn
 ```
 
-カレントディレクトリに `nu_plugin_polars_dyn` が出来る。これは標準のバイナリを**置き換える**
-もので、built-in の source はそのまま使える。`--out <dir>` で置き場所を、`--debug` で
-debug ビルドを選ぶ。詳しくは `docs.dev/custom_build.md`。
+手順は [docs/custom_build.md](docs/custom_build.md)。
 
 ## 利用者が踏む制約
 
