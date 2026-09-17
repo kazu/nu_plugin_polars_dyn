@@ -4,10 +4,11 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
 `nu_plugin_polars` の fork で、Python 無しで polars をシェルから使う。本家との違い:
 
 - コマンド接頭辞は `polars_dyn`(本家の `polars` と同時に登録できる)。
-- `polars_dyn open` は scan source の registry を通す。built-in は parquet / csv / ipc / ndjson と、
-  seekable zstd の `.csv.seek.zst` / `.ndjson.seek.zst`(`.jsonl.seek.zst` も同じ)で、
-  読み込みオプションは `--opts` の record で渡す。
-- 自分の scan source を足したバイナリを `nu-polars-dyn-build` で作れる。
+- `polars_dyn open` は scan source の registry を通す。built-in は polars 自身が読む
+  parquet / csv / ipc / ndjson で、読み込みオプションは `--opts` の record で渡す。
+- 形式は crate で足せる。`nu-polars-dyn-build` がそれを組み込んだバイナリを作る。同梱の
+  `seekzstdsep-scan` が seekable zstd の `.csv.seek.zst` / `.ndjson.seek.zst`
+  (`.jsonl.seek.zst` も同じ)を足す。
 - `polars_dyn call` で polars の expression plugin(`.so`)の関数を呼ぶ。
 - `polars_dyn collect --streaming` で streaming エンジンを選べる。
 
@@ -17,6 +18,7 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
 
 - `src/` — plugin 本体。`src/scan/` が registry と `polars_dyn open`、`src/call.rs` が `polars_dyn call`、
   `src/bin/nu-polars-dyn-build.rs` がカスタムバイナリのビルダー。
+- `seekzstdsep-scan/` — seekable zstd の scan source。plugin 本体には入らない。
 - `tests/` — `nu` を spawn する統合テスト。`tests/expr_plugin` は `polars_dyn call` 用の
   expression plugin、`tests/rows_scan` はカスタムバイナリ用の最小の scan source。
 - `docs/` — 利用者向けの手順。
@@ -54,16 +56,17 @@ polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | pola
 `nu-polars-dyn-build` が生成する。
 
 ```nu
-nu-polars-dyn-build my_scan_source --path my_scan_source=../my_scan_source
+$env.NU_POLARS_DYN_SOURCE = "<この repo>"   # 0.1.0 の tag を push するまでは要る
+nu-polars-dyn-build seekzstdsep_scan my_scan_source --path seekzstdsep_scan=./seekzstdsep-scan --path my_scan_source=../my_scan_source
 plugin add ./nu_plugin_polars_dyn
 ```
 
-手順は [docs/custom_build.md](docs/custom_build.md)。
+crate は何本でも並べられる。手順は [docs/custom_build.md](docs/custom_build.md)。
 
 ## 利用者が踏む制約
 
-`AnonymousScan` で書かれた source — `.seek.zst` と、組み込んだ crate の多く — には polars の
-制約がそのまま出る。parquet / csv / ipc / ndjson(plain)には当たらない。
+`AnonymousScan` で書かれた source — 組み込んだ crate の多く(`seekzstdsep-scan` を含む)— には
+polars の制約がそのまま出る。built-in の parquet / csv / ipc / ndjson には当たらない。
 
 - **`polars_dyn collect --streaming` が使えない。**polars-stream が `AnonymousScan` を
   `todo!("unimplemented: AnonymousScan")` で落とすため。plugin はこれを
@@ -85,9 +88,9 @@ plugin add ./nu_plugin_polars_dyn
 
 ## `.seek.zst` は何のためにあるか
 
-追記され続けるテキストログを、ログのまま置いたまま polars で読むため。ディスクは圧縮率のぶん
-減り、速度は素のファイルとおおむね同等(先頭を取るクエリだけ速い)。分析が主目的なら parquet の
-方が全軸で有利。
+`seekzstdsep-scan` を組み込むと使えるようになる形式。追記され続けるテキストログを、ログのまま
+置いたまま polars で読むためにある。ディスクは圧縮率のぶん減り、速度は素のファイルとおおむね
+同等(先頭を取るクエリだけ速い)。分析が主目的なら parquet の方が全軸で有利。
 
 作り方は [seekzstdsep](https://crates.io/crates/seekzstdsep) の CLI:
 

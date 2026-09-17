@@ -8,13 +8,7 @@
 
 ## 1. ビルダーを用意する
 
-`nu-polars-dyn-build` は plugin と同じ crate に入っている。
-
-```nu
-cargo install nu_plugin_polars_dyn --locked
-```
-
-repo から入れるなら:
+`nu-polars-dyn-build` は plugin と同じ crate に入っている。repo からビルドする:
 
 ```nu
 cd <この repo>
@@ -23,6 +17,9 @@ cargo build --release --bin nu-polars-dyn-build
 ```
 
 `~/.cargo/target/release/nu-polars-dyn-build` が出来る。
+
+crates.io に publish した後は `cargo install nu_plugin_polars_dyn --locked` でも入る
+(plugin と一緒に `~/.cargo/bin/` へ置かれる)。**`0.1.0` はまだ publish していない。**
 
 ## 2. scan source の crate を書く
 
@@ -81,6 +78,17 @@ polars = "=0.55.2"
 
 ## 3. ビルドする
 
+この repo が持っている `seekzstdsep-scan`(`.csv.seek.zst` / `.ndjson.seek.zst` /
+`.jsonl.seek.zst`)と、隣の checkout の `logfmt-scan`(`.logfmt` / `.logfmt.seek.zst`)を
+両方入れるなら:
+
+```nu
+$env.NU_POLARS_DYN_SOURCE = "/path/to/nu_plugin_polars_dyn"
+nu-polars-dyn-build seekzstdsep_scan logfmt_scan --path seekzstdsep_scan=/path/to/nu_plugin_polars_dyn/seekzstdsep-scan --path logfmt_scan=/path/to/polars-logfmt/logfmt-scan --out ~/bin
+```
+
+一般形は:
+
 ```nu
 nu-polars-dyn-build my_scan_source
 ```
@@ -104,8 +112,8 @@ nu-polars-dyn-build a b c --path a=../a --git b=https://example.com/b
 |---|---|
 | `--path <name>=<dir>` | その crate をディレクトリから取る |
 | `--git <name>=<url>` | その crate を git から取る |
-| `--out <dir>` | 置き場所。既定はカレントディレクトリ |
-| `--debug` | debug ビルド。既定は release |
+| `--out <dir>` | 置き場所。デフォルトはカレントディレクトリ |
+| `--debug` | debug ビルド。デフォルトは release |
 
 cargo の出力はそのまま流れ、失敗したらその exit code が返り、生成した project は消さずに
 パスを stderr に出す。`CARGO_TARGET_DIR` を設定しておくと 2 回目以降のビルドが短くなる。
@@ -133,7 +141,7 @@ polars_dyn open data.csv | polars_dyn collect      # built-in もそのまま
 ```
 
 出来たバイナリは標準の `nu_plugin_polars_dyn` を**置き換える**もので、built-in の
-parquet / csv / ipc / ndjson / `.seek.zst` はそのまま使える。
+parquet / csv / ipc / ndjson はそのまま使える。
 
 `plugin add` は登録した時点の署名を保存するので、バイナリを入れ替えたら `plugin add` を
 やり直す。試すだけなら registry を使わずに叩ける:
