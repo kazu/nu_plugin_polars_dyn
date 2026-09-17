@@ -13,7 +13,7 @@ use command::{
     datetime::datetime_commands, index::index_commands, integer::integer_commands,
     list::list_commands, selector::selector_commands, string::string_commands, stub::PolarsCmd,
 };
-use nu_plugin::{EngineInterface, Plugin, PluginCommand};
+use nu_plugin::{EngineInterface, MsgPackSerializer, Plugin, PluginCommand, serve_plugin};
 
 mod cache;
 pub mod call;
@@ -249,6 +249,40 @@ impl Plugin for PolarsPlugin {
             }
         };
         Ok(result?)
+    }
+}
+
+/// Serves the plugin over stdio with the built-in scan sources plus `extra`, and returns when
+/// the engine closes the connection.
+///
+/// Each element of `extra` is one crate's `scan_sources()`. Every binary is this call and
+/// nothing else: the published `nu_plugin_polars_dyn` passes `&[]`, and the `main.rs` that
+/// `nu-polars-dyn-build` generates passes one entry per crate it was given. A name or a suffix
+/// registered twice is printed to stderr and exits the process with 1.
+///
+/// Must be called from `main` before any thread is spawned: it sets `POLARS_ALLOW_EXTENSION`,
+/// which polars needs for aggregates over object dtypes.
+pub fn serve(extra: &[&'static [&'static dyn ScanSource]]) {
+    env_logger::init();
+
+    // SAFETY: the process is still single-threaded — `serve_plugin` below spawns the first
+    // thread — so no other thread can read the environment while it is being written.
+    unsafe {
+        std::env::set_var("POLARS_ALLOW_EXTENSION", "true");
+    }
+
+    let sources: Vec<&'static dyn ScanSource> = scan::builtin::BUILTIN
+        .iter()
+        .copied()
+        .chain(extra.iter().flat_map(|sources| sources.iter().copied()))
+        .collect();
+
+    match PolarsPlugin::new(Box::leak(sources.into_boxed_slice())) {
+        Ok(ref plugin) => serve_plugin(plugin, MsgPackSerializer {}),
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
     }
 }
 
