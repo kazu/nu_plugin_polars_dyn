@@ -21,7 +21,7 @@ impl ScanSource for Logfmt {
     }
 
     fn suffixes(&self) -> &'static [&'static str] {
-        &[".logfmt", ".logfmt.zst"]
+        &[".logfmt", ".logfmt.seek.zst"]
     }
 
     fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
