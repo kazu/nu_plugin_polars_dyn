@@ -1,12 +1,27 @@
 //! `polars_dyn open` on a `.seek.zst` source reads the same rows as the plain text file, across
-//! frame boundaries and with the pushdowns polars hands an anonymous scan. Runs the `nu` on `PATH`
-//! against the built plugin binary.
+//! frame boundaries and with the pushdowns polars hands an anonymous scan. The sources live in
+//! the `seekzstdsep_scan` crate, so this builds a plugin with that crate compiled in and runs the
+//! `nu` on `PATH` against it.
+
+mod common;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::OnceLock;
 
 use seekzstdsep::{RecordReader, convert_to_seekable_zst_reader};
 use tempfile::TempDir;
+
+/// The plugin every test here runs against, built once for the whole file.
+fn plugin() -> &'static Path {
+    static PLUGIN: OnceLock<PathBuf> = OnceLock::new();
+    PLUGIN.get_or_init(|| {
+        common::plugin_with(
+            &common::plugin_dir("seek_zst"),
+            &[("seekzstdsep_scan", Path::new("seekzstdsep-scan"))],
+        )
+    })
+}
 
 fn nu(script: &str) -> Output {
     nu_with_threads(script, None)
@@ -19,12 +34,11 @@ fn nu(script: &str) -> Output {
 /// the second batch. Asking for two threads is what makes the fixtures, of four frames each, span
 /// batches.
 fn nu_with_threads(script: &str, threads: Option<&str>) -> Output {
-    let plugin = env!("CARGO_BIN_EXE_nu_plugin_polars_dyn");
     let mut command = Command::new("nu");
     command.args([
         "--no-config-file",
         "--plugins",
-        &format!("[{plugin}]"),
+        &format!("[{}]", plugin().display()),
         "-c",
         script,
     ]);

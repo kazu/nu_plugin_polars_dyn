@@ -1,0 +1,21 @@
+[package]
+name = "rows_scan"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+publish = false
+description = "Minimal scan source crate used by the `nu-polars-dyn-build` integration test."
+
+[lib]
+bench = false
+test = false
+doctest = false
+
+[dependencies]
+nu_plugin_polars_dyn = { path = "../.." }
+polars = { version = "=0.55.2", features = ["lazy"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+
+[lints.clippy]
+unwrap_used = "deny"

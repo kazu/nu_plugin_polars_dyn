@@ -1,0 +1,25 @@
+[package]
+name = "seekzstdsep_scan"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95.0"
+license = "MIT"
+description = "Seekable zstd csv and ndjson scan sources for nu_plugin_polars_dyn."
+repository = "https://github.com/kazu/nu_plugin_polars_dyn"
+
+[lib]
+bench = false
+
+[dependencies]
+nu_plugin_polars_dyn = { version = "=0.1.0", path = ".." }
+polars = { version = "=0.55.2", features = ["lazy", "csv", "json"] }
+polars-core = { version = "~0.55.2" }
+polars-io = { version = "~0.55.2" }
+polars-plan = { version = "~0.55.2" }
+rayon = "=1.12.0"
+serde = { version = "1.0", features = ["derive"] }
+seekzstdsep = "=0.5.0"
+serde_json = "=1.0.151"
+
+[lints.clippy]
+unwrap_used = "deny"

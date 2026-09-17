@@ -4,9 +4,11 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
 `nu_plugin_polars` の fork で、Python 無しで polars をシェルから使う。本家との違い:
 
 - コマンド接頭辞は `polars_dyn`(本家の `polars` と同時に登録できる)。
-- `polars_dyn open` は scan source の registry を通す。built-in は parquet / csv / ipc / ndjson と、
-  seekable zstd の `.csv.seek.zst` / `.ndjson.seek.zst`(`.jsonl.seek.zst` も同じ)で、
-  読み込みオプションは `--opts` の record で渡す。
+- `polars_dyn open` は scan source の registry を通す。built-in は polars 自身が読む
+  parquet / csv / ipc / ndjson で、読み込みオプションは `--opts` の record で渡す。
+- 形式は crate で足せる。`nu-polars-dyn-build` がそれを組み込んだバイナリを作る。同梱の
+  `seekzstdsep-scan` が seekable zstd の `.csv.seek.zst` / `.ndjson.seek.zst`
+  (`.jsonl.seek.zst` も同じ)を足す。
 - `polars_dyn call` で polars の expression plugin(`.so`)の関数を呼ぶ。
 - `polars_dyn collect --streaming` で streaming エンジンを選べる。
 
@@ -14,9 +16,12 @@ Nushell の dataframe plugin。[nushell/nushell](https://github.com/nushell/nush
 
 ## 構成
 
-- `src/` — plugin 本体。`src/scan/` が registry と `polars_dyn open`、`src/call.rs` が `polars_dyn call`。
-- `tests/` — `nu` を spawn する統合テスト。`tests/expr_plugin` は `polars_dyn call` 用の expression plugin。
-- `dev/` — `logfmt` を compile-in した開発用 bin(publish しない、別 workspace)。
+- `src/` — plugin 本体。`src/scan/` が registry と `polars_dyn open`、`src/call.rs` が `polars_dyn call`、
+  `src/bin/nu-polars-dyn-build.rs` がカスタムバイナリのビルダー。
+- `seekzstdsep-scan/` — seekable zstd の scan source。plugin 本体には入らない。
+- `tests/` — `nu` を spawn する統合テスト。`tests/expr_plugin` は `polars_dyn call` 用の
+  expression plugin、`tests/rows_scan` はカスタムバイナリ用の最小の scan source。
+- `docs/` — 利用者向けの手順。
 - `docs.dev/` — 設計の合意と作業規約。
 
 ## Install
@@ -44,6 +49,58 @@ polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | pola
 
 コマンド一覧は `help polars_dyn`、`--opts` の形は `help polars_dyn open`。
 
+## 自分の scan source を足す
+
+`polars_dyn open` が読める形式は増やせる。scan source は plugin に組み込まれるのでバイナリを
+作り直すが、書くのは scan source の crate だけで、cargo project も `main.rs` も
+`nu-polars-dyn-build` が生成する。
+
+```nu
+$env.NU_POLARS_DYN_SOURCE = "<この repo>"   # 0.1.0 の tag を push するまでは要る
+nu-polars-dyn-build seekzstdsep_scan my_scan_source --path seekzstdsep_scan=./seekzstdsep-scan --path my_scan_source=../my_scan_source
+plugin add ./nu_plugin_polars_dyn
+```
+
+crate は何本でも並べられる。手順は [docs/custom_build.md](docs/custom_build.md)。
+
+## 利用者が踏む制約
+
+`AnonymousScan` で書かれた source — 組み込んだ crate の多く(`seekzstdsep-scan` を含む)— には
+polars の制約がそのまま出る。built-in の parquet / csv / ipc / ndjson には当たらない。
+
+- **`polars_dyn collect --streaming` が使えない。**polars-stream が `AnonymousScan` を
+  `todo!("unimplemented: AnonymousScan")` で落とすため。plugin はこれを
+  「collecting on the streaming engine: not yet implemented: unimplemented: AnonymousScan」の
+  エラーにする。in-memory への fallback はしない。
+- **offset 付きの `slice` が効かない。**`polars_dyn slice 1000 10` は slice が scan に降りず、
+  ファイルを全部読んでから plan が 10 行取る。**検知できないので警告も出ない。**先頭から取る
+  `polars_dyn slice 0 10` は効く。
+
+`.seek.zst` にはさらに:
+
+- **`--opts` の一部を受け付けない。**frame ごとに読むと意味が変わる 8 つ(`n_rows` /
+  `skip_rows` / `skip_lines` / `skip_rows_after_header` / `row_index` / `columns` /
+  `projection` / `column_names_overwrite`)はエラーになる。`polars_dyn slice` / `select` /
+  `rename` が代わり。行に番号を振るものには代わりが無い。
+- **schema を先頭 frame だけで決める。**後の frame にだけ現れる列は落ち、型が後で広がると
+  パースに失敗する。`infer_schema_length` も先頭 frame を越えない。逃げ道は
+  `--opts {schema: {fields: {n: Int64, extra: String}, metadata: null}}`。
+
+## `.seek.zst` は何のためにあるか
+
+`seekzstdsep-scan` を組み込むと使えるようになる形式。追記され続けるテキストログを、ログのまま
+置いたまま polars で読むためにある。ディスクは圧縮率のぶん減り、速度は素のファイルとおおむね
+同等(先頭を取るクエリだけ速い)。分析が主目的なら parquet の方が全軸で有利。
+
+作り方は [seekzstdsep](https://crates.io/crates/seekzstdsep) の CLI:
+
+```nu
+seekzstdsep compress events.jsonl   # → events.jsonl.seek.zst
+```
+
+対応する接尾辞は `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst`。素の `.zst` は
+扱わない。
+
 ## 開発
 
 `CARGO_TARGET_DIR` はローカルディスクに置く。ゲートは `toolkit.nu` の 1 箇所:
@@ -53,5 +110,5 @@ use toolkit.nu
 toolkit check
 ```
 
-`fmt --check`、`clippy -D warnings`、`test` を root と `dev/` の両方で回す。GitHub Actions は
-root だけを回す(`dev/` は隣の checkout `../polars-logfmt` が要る。`docs.dev/dev_bin.md`)。
+`fmt --check`、`clippy -D warnings`、`test` を回す。GitHub Actions も同じものを cargo 直叩きで
+回す。

@@ -5610,6 +5610,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rows_scan"
+version = "0.1.0"
+dependencies = [
+ "nu_plugin_polars_dyn",
+ "polars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "roxmltree"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5835,6 +5845,21 @@ dependencies = [
  "tracing-subscriber",
  "zeekstd",
  "zstd",
+]
+
+[[package]]
+name = "seekzstdsep_scan"
+version = "0.1.0"
+dependencies = [
+ "nu_plugin_polars_dyn",
+ "polars",
+ "polars-core",
+ "polars-io",
+ "polars-plan",
+ "rayon",
+ "seekzstdsep",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

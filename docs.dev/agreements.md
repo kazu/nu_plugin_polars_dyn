@@ -4,9 +4,10 @@
 
 ## 目的
 
-nushell から、Rust 製の polars 拡張(動的ライブラリ `.so` / `.dll`)を FFI 経由で
-自由に使えるようにする。polars のオブジェクトは遅延評価(LazyFrame)のまま
-パイプラインに流す。基本目標は **Python 無しで polars をシェルとして使える**ことで、
+nushell から、Rust 製の polars 拡張を自由に使えるようにする。expression の拡張は polars 公式の
+expression plugin(動的ライブラリ `.so` / `.dll`)を FFI 経由でそのまま、scan の拡張は
+利用者の crate を組み込んだバイナリを作る形で。polars のオブジェクトは遅延評価(LazyFrame)の
+ままパイプラインに流す。基本目標は **Python 無しで polars をシェルとして使える**ことで、
 Python 向けに作られた拡張の互換は副次的。
 
 ## 名前
@@ -37,18 +38,19 @@ Python 向けに作られた拡張の互換は副次的。
 - expression の拡張は polars 公式の expression plugin 機構をそのまま使う
   (`polars-plan` の feature `ffi_plugin`、`FunctionExpr::FfiPlugin`)。`.so` は
   polars の loader に開かせ、自前の FFI は書かない。
-- scan の拡張は当面 **compile-in** にする。polars に scan 用の `.so` 機構は無く
-  (`AnonymousScan` は同一バイナリ内の trait object を渡すだけで、上流もこの形を
-  固めていない)、C ABI を自前で持つコストに見合わないため。fork 側に
-  「名前 → scan 実装」の registry を 1 つ置き、`polars_logfmt` 等は `dev/` の bin が
-  cargo 依存として registry に登録する。
-- scan の `.so` ロード(自前 C ABI + Arrow C Data Interface)は**他の実装がすべて
-  終わった最後に**、registry の実装 1 件として足す。そのため registry の境界の入力は
-  FFI を越えられる型だけにする(source の文字列とオプションの bytes)。`.so` 版は
-  `.so` から受けた schema と `scan(args) → DataFrame` をその実装の中で `AnonymousScan`
-  に包む。nu 側のコマンドはこの移行で変えない。
-- `.so` との受け渡しは nushell の型を挟まず polars のオブジェクトを直接渡す
-  (Arrow C Data Interface 等)。
+- scan の拡張は **compile-in** にする。fork 側に「名前 → scan 実装」の registry を 1 つ置き、
+  `polars_logfmt` 等は bin が cargo 依存として registry に登録する。利用者が自分の scan
+  source を足したバイナリを作れるように、その cargo project を生成してビルドするコマンドを
+  fork が持つ(「カスタムバイナリを作る」の節)。
+- scan の `.so` ロードはしない。polars に scan 用の `.so` 機構は無く(`AnonymousScan` は
+  同一バイナリ内の trait object)、自前で作ると Rust の型を別々のビルド成果物のあいだで
+  渡すことになる。`repr(Rust)` のレイアウトはコンパイルごとに変わりうるので言語として
+  保証が無く、実測でも polars の global がバイナリごとに二重になり、片方が作った `Schema` を
+  もう片方が引けずクエリが黙って誤答した(task 010 の記録)。採らなかった案は
+  自前 C ABI + Arrow C Data Interface(projection と predicate が `.so` に降りない)、
+  別プロセス + Arrow IPC stream(同じく降りず、コピーとプロセス起動が乗る)。
+- registry の境界の入力は source の文字列とオプションの bytes に保つ。`--opts` の中身を
+  nu 側で覗かない、という一点だけが理由で、FFI を越えるためではない。
 
 ## `polars_dyn open` と registry
 
@@ -74,14 +76,13 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
   }
   ```
 
-- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in の
-  parquet / csv / ipc / ndjson と `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst`
-  (「seekzstdsep を圧縮層として挟む」の節)も同じ trait の実装で、`--opts` の JSON を `polars-io` の
-  オプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を derive
-  している)に直接食わせる。形式ごとの flag 解析を fork には持たない。`.seek.zst` の 2 つは
-  そのうち frame ごとに読むと意味が変わるもの(行や列をファイルから取り出す、列に名前を付ける)を
-  エラーにする — 詳細は「seekzstdsep を圧縮層として挟む」の節。`logfmt` は
-  `dev/` の bin だけが登録する。接尾辞の衝突は構築時に 1 回検査する。
+- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in は
+  **polars 自身が読む parquet / csv / ipc / ndjson の 4 つだけ**で、`--opts` の JSON を
+  `polars-io` のオプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を
+  derive している)に直接食わせる。形式ごとの flag 解析を fork には持たない。
+  `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst` は `seekzstdsep-scan`、`logfmt` は
+  `logfmt-scan`(別 repo)の crate で、どちらも `nu-polars-dyn-build` が組み込む。
+  接尾辞の衝突は構築時に 1 回検査する。
 - logfmt の `opts` は serde struct(`line_filter` は closure を渡せないので部分文字列)。
 - 採らなかった案: source ごとの named flag(`open` の分岐を作り直すことになる)、
   `inventory` crate による自動収集(構築時に渡す配列で足りる)、一覧コマンド
@@ -89,6 +90,40 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
 - 本家の `open.rs`(形式ごとの分岐と flag 群)は**皮も残さず消す**。新 `open` は
   ブランチで書き、`--opts` で built-in 形式が賄えると確認できた時点で旧 `open.rs` と
   差し替える。それまで main では旧 `open` が動いている。
+
+## カスタムバイナリを作る
+
+registry に渡す配列は bin が組む。published バイナリは built-in だけを渡すので、自分の scan
+source を足したい利用者は**自分のバイナリを作る**。そのための cargo project を利用者に書かせず、
+fork が生成してビルドする。
+
+```
+nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
+                    [--out <dir>] [--debug]
+```
+
+- **利用者が書くコードはゼロ。**`Cargo.toml` も `main.rs` もビルダーが生成する。出来るバイナリの
+  名前は `nu_plugin_polars_dyn` のまま(nushell は `nu_plugin_` で始まる名前を plugin として
+  扱う)。ビルダーは plugin ではないので `nu-polars-dyn-build`。published バイナリを置き換える。
+- 組み込まれる crate は入口を 1 つ公開する。これだけが規約で、`ScanSource` の実装は上の節のまま。
+
+  ```rust
+  pub fn scan_sources() -> &'static [&'static dyn nu_plugin_polars::scan::ScanSource];
+  ```
+
+  規約を満たさない crate を渡した場合は、生成したコードのコンパイルエラーがそのまま利用者に出る。
+  ビルダーは事前に検査しない(cargo と rustc が出すものを二重に持たない)。
+- 位置引数は crates.io の crate 名で、版は指定しない。`--path` / `--git` はその名前の crate を
+  そこから取る逃げ道で、publish していない crate のために要る。
+- 生成 project が依存する `nu_plugin_polars_dyn` は、**ビルダーが自分の出自を埋め込んで**
+  決める。`env!("CARGO_PKG_REPOSITORY")` を git URL に、`env!("CARGO_PKG_VERSION")` を tag に
+  した git 依存で、利用者は何も渡さない。ビルダーとバイナリの版が食い違わないため。
+  環境変数 `NU_POLARS_DYN_SOURCE` にディレクトリを渡すとそこへの path 依存に差し替わる —
+  publish 前と、この repo 自身の統合テストのための逃げ道。採らなかった案は利用者に path を
+  渡させること(ビルダーが自分の出自を知っているのに聞く理由が無い)。
+- `bin` は `nu_plugin_polars::serve(extra)` を呼ぶだけ。`serve` は env_logger の初期化、
+  `POLARS_ALLOW_EXTENSION` の設定、`BUILTIN` と `extra` の連結、`PolarsPlugin::new` と
+  `serve_plugin` をまとめた 1 本で、published の `src/main.rs` も同じものを呼ぶ。
 
 ## `polars_dyn call`(expression plugin)
 
@@ -154,13 +189,10 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
   `version = "0.1.0"`、`edition = "2024"`、`rust-version = "1.95.0"`、`license = "MIT"`
   (本家の LICENSE は残す)、`authors` と `repository` は kazu のもの。
 - publish する manifest には path / git 依存を置けない(cargo が版の無い依存を拒む)ので、
-  compile-in の logfmt は published crate には入れない。root を workspace にし、
-  `dev/` に publish しない bin crate を置いて、そこで `polars_logfmt` を path 依存にして
-  registry に登録する。そのため registry は静的配列ではなく **`PolarsPlugin` 構築時に
-  bin が渡す**形にする(published bin は built-in だけ、dev bin は built-in + logfmt)。
-  logfmt が `.so` 経由で呼べるようになった時点で `dev/` は消す。採らなかった案は
-  `polars_logfmt` も publish して version 依存にすること(最終形が `.so` なので、
-  途中の形のために publish しない)。
+  logfmt のような非公開の scan source は published crate に入れない。registry は静的配列では
+  なく **`PolarsPlugin` 構築時に bin が渡す**形にして、published バイナリは built-in だけを、
+  `nu-polars-dyn-build` が生成するバイナリは built-in + 利用者の crate を渡す。
+  生成 project は published manifest ではないので path / git 依存を置ける。
 - `workspace = true` は nushell 0.114.1 の root の実値で置き換える。nu 系は crates.io の
   `=0.114.1`(`nu-protocol` / `nu-plugin` / `nu-path` / `nu-utils`、dev の `nu-cmd-lang` /
   `nu-engine` / `nu-parser` / `nu-command` / `nu-plugin-test-support`)。feature は本家の
@@ -169,13 +201,11 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
   `tokio` の直接依存は cloud 認証層と一緒に消える(polars が内部で持つ分は残る)。
 - `Cargo.lock` を commit する。`CARGO_TARGET_DIR` は repo に書かずセッションの env で渡す。
 - `polars-lazy` に feature `ffi_plugin` を付ける(facade の `polars` にはこの feature が無い)。
-- `dev/Cargo.toml` に `polars_logfmt = { path = "../../polars-logfmt/polars-logfmt" }`
-  (同じ親ディレクトリで並べて開発する)。
 - polars 版の順序: (1) `=0.54.4` のまま単体ビルドを緑にする(独立化と版上げを混ぜない)
   → (2) `=0.55.2` へ上げる(nushell main が既に上げているので、その差分を取り込む)
   → (3) `polars_logfmt` を 0.52 から 0.55.2 へ一度で上げる。logfmt 側 repo で、
   workspace の member から外れている問題と `bigidx` 等の feature 統合の影響もこの段で
-  直す → (4) `dev/` の bin で結線。(1)(2) は logfmt に依存しない。
+  直す → (4) `nu-polars-dyn-build` で結線。(1)(2) は logfmt に依存しない。
 - 以後 fork の polars 版は nu のリリースではなく、logfmt と揃うことを基準に動かす。
 
 ## `CustomValue` コンテナ enum
@@ -221,13 +251,16 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
 スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。seekable zstd の frame を
 単位に読む層を 1 つ作り、その上に csv / ndjson のパーサを載せる。
 
+**この層は plugin 本体ではなく `seekzstdsep-scan` crate に置く**(`nu-polars-dyn-build` で組み込む)。
+plugin が publish するバイナリは polars 自身が読む 4 形式だけを持ち、`seekzstdsep` に依存しない。
+
 接尾辞は `.seek.zst`。seekzstdsep は元の名前を残して `<元の名前>.seek.zst` を作るので
 (`seekzstdsep compress events.jsonl` → `events.jsonl.seek.zst`)、`.csv.seek.zst` /
 `.ndjson.seek.zst` が「接尾辞の最長一致でパーサを選ぶ」registry の設計とそのまま噛み合う。
 素の `.zst`(seek 不可、polars が全体展開)は登録しない。`polars_dyn open x.csv.zst` は
 登録名の列挙エラーになる。
 
-1. **frame 層は fork の `src/scan/` に置く。** frame ごとの読み出し、rayon の frame 並列、
+1. **frame 層は `seekzstdsep-scan` crate に置く。** frame ごとの読み出し、rayon の frame 並列、
    chunk の連結を持つ。パーサは「1 frame の `&[u8]` と frame 番号と schema → `DataFrame`」と
    「schema」の 2 関数を注入する(frame 境界 = レコード境界なので、パーサは frame をまたぐ
    状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。
@@ -244,7 +277,7 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
    optimizer の内部表現にしか存在しないもの(`sort` + `slice` の動的 top-k)があり、これを
    `LazyFrame::filter` に渡すとプロセスが落ちる。当てずに素通しする — その式は速くするための
    境界で、答えの一部ではない(`Sort` が自分の slice を保持している)。
-2. **`.csv.seek.zst` / `.ndjson.seek.zst` を built-in の `ScanSource` として登録する。**
+2. **`.csv.seek.zst` / `.ndjson.seek.zst` を同じ crate の `ScanSource` にする。**
    plain の ndjson が `.ndjson` と `.jsonl` を持つのに合わせ、`.jsonl.seek.zst` も同じ source に
    登録する。
    パーサは polars 標準の reader を `Cursor` に当てるだけ。`polars_dyn open` のコマンドは
@@ -265,13 +298,11 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
    クエリ側が埋めるため。
 
    残りは素通しするが、`infer_schema_length` は schema を決める frame 0 までしか見ない
-   (plain との差。詳細は `src/scan/seek_zst.rs` のモジュール doc)。
+   (plain との差。詳細は `seekzstdsep-scan/src/seek_zst.rs` のモジュール doc)。
 
 採らなかった案: 汎用の frame 層を `seekzstdsep` の隣の crate として publish し、logfmt と
-fork の両方から使う。両方が依存できる場所はそこしかないので重複は消えるが、利用者が fork だけの
-crate を 1 本増やすことになる。logfmt は `.so` ロード(「scan の `.so` ロード」の節)で
-C ABI 越しの外部実装になり、そのとき fork の Rust の frame 層は link できない。外部実装が自前の
-frame 走査を持つのは重複ではなく境界の向こう側なので、この層は fork の中に閉じる。
+fork の両方から使う。`seekzstdsep-scan` が `pub` で持つので、logfmt 側が要るならそこを依存に
+足せばよく、置き場所をもう 1 つ作る理由が無い。
 
 **非圧縮ファイルは frame 層で扱わない。** 素の `.csv` / `.ndjson` は polars の標準 scan が
 multi-threaded reader と projection / predicate pushdown 込みで読めるので、改行で切った固定長

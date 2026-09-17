@@ -33,7 +33,8 @@ memmove は残余だけ、出力は Vec に組まずに sink へ直接書く。�
 
 ### `unsafe`
 
-`.so` のロードと Arrow C Data Interface の受け渡しで `unsafe` が増える。書くときは
+expression plugin(`polars_dyn call`)の `.so` の受け渡しと、プロセスの環境変数を書く
+ところで `unsafe` が要る。書くときは
 [Rustonomicon](https://doc.rust-lang.org/nomicon/intro.html) の保証を理解した上で、
 すべての `unsafe` ブロックに **`// SAFETY:` コメント**を付けて、どの不変条件をどう守っているか
 を書く。変更するときに何を見ればよいかがそこで分かるようにする。
@@ -59,8 +60,11 @@ memmove は残余だけ、出力は Vec に組まずに sink へ直接書く。�
 ### 依存の追加
 
 依存はコンパイル時間と監査の手間を増やす。必須で、よく使われ、保守されている crate だけ。
-似た用途の crate を複数入れない。版は exact semver(`"1.2.3"`)。git 依存や path 依存は
-publish する manifest には置けないので使わない(`dev/` は例外)。
+似た用途の crate を複数入れない。版は exact semver(`"1.2.3"`)。版の無い git 依存や path 依存は
+publish する manifest には置けないので使わない。例外は 2 つ: `tests/` の crate と
+`nu-polars-dyn-build` が生成する project(どちらも publish しない)、そして
+`{ version = "=x.y.z", path = ".." }` のように**版を併記した path 依存**(publish できる形で、
+同じ repo の crate どうしを繋ぐのに使う。`seekzstdsep-scan` がこれ)。
 
 ## 書き方
 
