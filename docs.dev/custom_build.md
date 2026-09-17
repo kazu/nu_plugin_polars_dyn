@@ -51,8 +51,11 @@ name = "nu-polars-dyn-custom"
 path = "src/main.rs"
 
 [dependencies]
-nu_plugin_polars_dyn = { git = "...", tag = "..." }
+nu_plugin_polars_dyn = "=<ビルダーの版>"
 <利用者の crate> = "*"
+
+[patch.crates-io]
+nu_plugin_polars_dyn = { git = "...", tag = "..." }
 ```
 
 ```rust
@@ -77,6 +80,13 @@ fn main() {
 ビルダーは `env!("CARGO_PKG_REPOSITORY")` と `env!("CARGO_PKG_VERSION")` を埋め込んで持つので、
 利用者に聞かずに「自分と同じ版の plugin」を指せる。ビルダーとバイナリの版が食い違うと、
 `serve` の署名や `ScanSource` の形が合わずコンパイルエラーになる。
+
+**依存そのものではなく `[patch.crates-io]` に書く。**組み込む crate は自分の `Cargo.toml` で
+`nu_plugin_polars_dyn = "0.1"`(crates.io)と書く。生成 project が git や path で取ると、
+cargo にとっては**別 source の別 package**になり、`ScanSource` が 2 つの別の trait になって
+組み合わせられない。patch にすれば、crates.io を指している依存が全部ビルダーの選んだ 1 つに
+解決される。未 publish でも効くことは実測で確かめた(`tests/custom_build.rs` の
+`a_crate_taking_the_plugin_from_crates_io_builds`)。
 
 **この形は、その版の tag が push されていて初めて動く。**`0.1.0` の tag はまだ無いので、
 今日のデフォルトの形は依存を解決できない。release ごとに `<version>` の tag を打つこと。

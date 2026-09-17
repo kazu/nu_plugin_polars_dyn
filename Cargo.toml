@@ -1,5 +1,5 @@
 [workspace]
-members = ["tests/expr_plugin"]
+members = ["tests/expr_plugin", "tests/rows_scan"]
 
 [package]
 authors = ["Kazuhisa TAKEI <kazuhisa@gmail.com>"]
@@ -16,6 +16,12 @@ version = "0.1.0"
 
 [[bin]]
 name = "nu_plugin_polars_dyn"
+path = "src/main.rs"
+bench = false
+
+[[bin]]
+name = "nu-polars-dyn-build"
+path = "src/bin/nu-polars-dyn-build.rs"
 bench = false
 
 [lib]
