@@ -33,7 +33,8 @@ memmove は残余だけ、出力は Vec に組まずに sink へ直接書く。�
 
 ### `unsafe`
 
-`.so` のロードと Arrow C Data Interface の受け渡しで `unsafe` が増える。書くときは
+expression plugin(`polars_dyn call`)の `.so` の受け渡しと、プロセスの環境変数を書く
+ところで `unsafe` が要る。書くときは
 [Rustonomicon](https://doc.rust-lang.org/nomicon/intro.html) の保証を理解した上で、
 すべての `unsafe` ブロックに **`// SAFETY:` コメント**を付けて、どの不変条件をどう守っているか
 を書く。変更するときに何を見ればよいかがそこで分かるようにする。
