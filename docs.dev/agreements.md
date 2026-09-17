@@ -76,14 +76,13 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
   }
   ```
 
-- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in の
-  parquet / csv / ipc / ndjson と `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst`
-  (「seekzstdsep を圧縮層として挟む」の節)も同じ trait の実装で、`--opts` の JSON を `polars-io` の
-  オプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を derive
-  している)に直接食わせる。形式ごとの flag 解析を fork には持たない。`.seek.zst` の 2 つは
-  そのうち frame ごとに読むと意味が変わるもの(行や列をファイルから取り出す、列に名前を付ける)を
-  エラーにする — 詳細は「seekzstdsep を圧縮層として挟む」の節。`logfmt` は
-  `nu-polars-dyn-build` が作るカスタムバイナリだけが登録する。接尾辞の衝突は構築時に 1 回検査する。
+- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in は
+  **polars 自身が読む parquet / csv / ipc / ndjson の 4 つだけ**で、`--opts` の JSON を
+  `polars-io` のオプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を
+  derive している)に直接食わせる。形式ごとの flag 解析を fork には持たない。
+  `.csv.seek.zst` / `.ndjson.seek.zst` / `.jsonl.seek.zst` は `seekzstdsep-scan`、`logfmt` は
+  `logfmt-scan`(別 repo)の crate で、どちらも `nu-polars-dyn-build` が組み込む。
+  接尾辞の衝突は構築時に 1 回検査する。
 - logfmt の `opts` は serde struct(`line_filter` は closure を渡せないので部分文字列)。
 - 採らなかった案: source ごとの named flag(`open` の分岐を作り直すことになる)、
   `inventory` crate による自動収集(構築時に渡す配列で足りる)、一覧コマンド
@@ -252,13 +251,16 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
 スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。seekable zstd の frame を
 単位に読む層を 1 つ作り、その上に csv / ndjson のパーサを載せる。
 
+**この層は plugin 本体ではなく `seekzstdsep-scan` crate に置く**(`nu-polars-dyn-build` で組み込む)。
+plugin が publish するバイナリは polars 自身が読む 4 形式だけを持ち、`seekzstdsep` に依存しない。
+
 接尾辞は `.seek.zst`。seekzstdsep は元の名前を残して `<元の名前>.seek.zst` を作るので
 (`seekzstdsep compress events.jsonl` → `events.jsonl.seek.zst`)、`.csv.seek.zst` /
 `.ndjson.seek.zst` が「接尾辞の最長一致でパーサを選ぶ」registry の設計とそのまま噛み合う。
 素の `.zst`(seek 不可、polars が全体展開)は登録しない。`polars_dyn open x.csv.zst` は
 登録名の列挙エラーになる。
 
-1. **frame 層は fork の `src/scan/` に置く。** frame ごとの読み出し、rayon の frame 並列、
+1. **frame 層は `seekzstdsep-scan` crate に置く。** frame ごとの読み出し、rayon の frame 並列、
    chunk の連結を持つ。パーサは「1 frame の `&[u8]` と frame 番号と schema → `DataFrame`」と
    「schema」の 2 関数を注入する(frame 境界 = レコード境界なので、パーサは frame をまたぐ
    状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。
@@ -275,7 +277,7 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
    optimizer の内部表現にしか存在しないもの(`sort` + `slice` の動的 top-k)があり、これを
    `LazyFrame::filter` に渡すとプロセスが落ちる。当てずに素通しする — その式は速くするための
    境界で、答えの一部ではない(`Sort` が自分の slice を保持している)。
-2. **`.csv.seek.zst` / `.ndjson.seek.zst` を built-in の `ScanSource` として登録する。**
+2. **`.csv.seek.zst` / `.ndjson.seek.zst` を同じ crate の `ScanSource` にする。**
    plain の ndjson が `.ndjson` と `.jsonl` を持つのに合わせ、`.jsonl.seek.zst` も同じ source に
    登録する。
    パーサは polars 標準の reader を `Cursor` に当てるだけ。`polars_dyn open` のコマンドは
@@ -296,12 +298,11 @@ polars は csv / ndjson の圧縮ファイルを全体展開してからしか�
    クエリ側が埋めるため。
 
    残りは素通しするが、`infer_schema_length` は schema を決める frame 0 までしか見ない
-   (plain との差。詳細は `src/scan/seek_zst.rs` のモジュール doc)。
+   (plain との差。詳細は `seekzstdsep-scan/src/seek_zst.rs` のモジュール doc)。
 
 採らなかった案: 汎用の frame 層を `seekzstdsep` の隣の crate として publish し、logfmt と
-fork の両方から使う。重複は消えるが、利用者が fork だけの crate を 1 本増やすことになる。
-scan source は compile-in なので、外部の crate は fork を通常の cargo 依存として持つ。
-この層を `pub` にしておけば外部の実装からもそのまま呼べ、別 crate に切り出す理由が無い。
+fork の両方から使う。`seekzstdsep-scan` が `pub` で持つので、logfmt 側が要るならそこを依存に
+足せばよく、置き場所をもう 1 つ作る理由が無い。
 
 **非圧縮ファイルは frame 層で扱わない。** 素の `.csv` / `.ndjson` は polars の標準 scan が
 multi-threaded reader と projection / predicate pushdown 込みで読めるので、改行で切った固定長
