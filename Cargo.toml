@@ -1,6 +1,5 @@
 [workspace]
 members = ["tests/expr_plugin"]
-exclude = ["dev"]
 
 [package]
 authors = ["Kazuhisa TAKEI <kazuhisa@gmail.com>"]

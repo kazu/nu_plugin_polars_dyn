@@ -60,8 +60,11 @@ expression plugin(`polars_dyn call`)の `.so` の受け渡しと、プロセス�
 ### 依存の追加
 
 依存はコンパイル時間と監査の手間を増やす。必須で、よく使われ、保守されている crate だけ。
-似た用途の crate を複数入れない。版は exact semver(`"1.2.3"`)。git 依存や path 依存は
-publish する manifest には置けないので使わない(`dev/` は例外)。
+似た用途の crate を複数入れない。版は exact semver(`"1.2.3"`)。版の無い git 依存や path 依存は
+publish する manifest には置けないので使わない。例外は 2 つ: `tests/` の crate と
+`nu-polars-dyn-build` が生成する project(どちらも publish しない)、そして
+`{ version = "=x.y.z", path = ".." }` のように**版を併記した path 依存**(publish できる形で、
+同じ repo の crate どうしを繋ぐのに使う。`seekzstdsep-scan` がこれ)。
 
 ## 書き方
 

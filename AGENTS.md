@@ -26,7 +26,8 @@ nushell の polars plugin の fork。Python 無しで polars をシェルとし�
 
 - `.unwrap()` 禁止(`unwrap_used = deny`)。ユーザ入力や外部システム起因で panic しない
 - `unsafe` には `// SAFETY:` を付ける
-- 依存は exact semver。git / path 依存は publish する manifest に置かない(`dev/` は例外)
+- 依存は exact semver。版の無い git / path 依存は publish する manifest に置かない(`tests/` の crate と、
+  版を併記した path 依存は例外。`docs.dev/rust_style.md`「依存の追加」)
 - 本家から引き継いだコードは触らない。差分は最小に保つ
 - 新しいテストは `tests/` に置く
 - commit message は kernel 流(`subsystem: 命令形のサマリ`)。conventional commits ではない
