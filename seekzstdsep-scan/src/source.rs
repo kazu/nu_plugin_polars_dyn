@@ -10,7 +10,7 @@
 //! The rest give the answer the plain source gives, with two things to know. An option that asks
 //! how much of the file to look at sees only the first frame, since that is where the schema is
 //! settled: `infer_schema_length` is the one of those, and it differs from the plain source
-//! without saying so; [`super::seek_zst`] has the whole of what the schema being settled there
+//! without saying so; [`crate::seek_zst`] has the whole of what the schema being settled there
 //! costs. And ndjson's `chunk_size`, `low_memory` and `n_threads` say how polars' own reader is to
 //! work through a file, which is not how a frame is read, so they have no effect here; they change
 //! no answer, so they are taken rather than refused.
@@ -34,10 +34,8 @@ use polars_io::csv::read::CsvReadOptions;
 use polars_io::ndjson;
 use polars_io::utils::overwrite_schema;
 
-use super::ScanSource;
-use super::builtin::ndjson_defaults;
-use super::opts::overlay_opts;
-use super::seek_zst::{FrameParser, SeekZstScan};
+use crate::seek_zst::{FrameParser, SeekZstScan};
+use nu_plugin_polars::scan::{ScanSource, builtin::ndjson_defaults, overlay_opts};
 use polars_plan::dsl::NDJsonReadOptions;
 use serde_json::Value;
 
@@ -194,5 +192,8 @@ fn format_opts<T>(defaults: T, opts: &[u8]) -> PolarsResult<T>
 where
     T: serde::Serialize + serde::de::DeserializeOwned,
 {
-    overlay_opts(defaults, &Value::Object(super::opts::parse_opts(opts)?))
+    overlay_opts(
+        defaults,
+        &Value::Object(nu_plugin_polars::scan::parse_opts(opts)?),
+    )
 }

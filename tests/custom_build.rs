@@ -2,48 +2,9 @@
 //! binary reads the crate's sources through `polars_dyn open`. Runs the `nu` on `PATH` against
 //! the binary it just built.
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::{Command, Output},
-};
+mod common;
 
-const BUILD: &str = env!("CARGO_BIN_EXE_nu-polars-dyn-build");
-
-fn repo() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-/// The target directory of this test run. The generated project builds into it so the
-/// dependencies it shares with the plugin are already there.
-fn target_dir() -> PathBuf {
-    Path::new(BUILD)
-        .parent()
-        .and_then(Path::parent)
-        .expect("the test binary lives in <target>/<profile>")
-        .to_path_buf()
-}
-
-/// Builds a plugin with `name` taken from `crate_dir` compiled in, placing it in `out`.
-///
-/// `crate_dir` is given as the caller wrote it — the test passes a relative one, which only
-/// works if the builder resolves it against the working directory rather than against the
-/// manifest it generates somewhere else.
-fn build_plugin(out: &Path, name: &str, crate_dir: &Path) -> Output {
-    Command::new(BUILD)
-        .args([
-            name,
-            "--path",
-            &format!("{name}={}", crate_dir.display()),
-            "--out",
-            &out.display().to_string(),
-            "--debug",
-        ])
-        .env("NU_POLARS_DYN_SOURCE", repo())
-        .env("CARGO_TARGET_DIR", target_dir())
-        .output()
-        .expect("nu-polars-dyn-build must run")
-}
+use std::{fs, path::Path, process::Command};
 
 fn run_nu(plugin: &Path, script: &str) -> String {
     let output = Command::new("nu")
@@ -109,16 +70,10 @@ fn write_crate_without_the_entry_point(dir: &Path) {
 #[test]
 fn builds_a_plugin_with_a_scan_source_compiled_in() {
     let out = tempfile::tempdir().expect("tempdir");
-    let output = build_plugin(out.path(), "rows_scan", Path::new("tests/rows_scan"));
-    assert!(
-        output.status.success(),
-        "nu-polars-dyn-build failed\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let plugin = common::plugin_with(
+        &common::plugin_dir("rows_scan"),
+        &[("rows_scan", Path::new("tests/rows_scan"))],
     );
-
-    let plugin = out.path().join("nu_plugin_polars_dyn");
-    assert!(plugin.is_file(), "the plugin was not placed in --out");
 
     let rows = out.path().join("x.rows");
     fs::write(&rows, "a\nb\nc\n").expect("write fixture");
@@ -162,7 +117,7 @@ fn a_crate_without_the_entry_point_fails_to_compile(out: &Path) {
     let bad = out.join("no_entry");
     write_crate_without_the_entry_point(&bad);
 
-    let output = build_plugin(out, "no_entry", &bad);
+    let output = common::build_plugin(out, &[("no_entry", &bad)]);
     assert!(!output.status.success(), "the build should have failed");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(

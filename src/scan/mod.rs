@@ -3,13 +3,11 @@
 //! A [`ScanSource`] turns a source string and an options blob into a `LazyFrame`. The
 //! [`ScanRegistry`] holds the sources the bin registers at plugin construction and picks one by
 //! name or by the longest matching suffix. The built-in sources — parquet, csv, ipc and ndjson as
-//! polars reads them, and the `.seek.zst` pair of [`seek_zst_builtin`] — are in [`builtin`].
+//! polars reads them — are in [`builtin`]. Anything else is compiled in by the bin.
 
 pub mod builtin;
 mod command;
 mod opts;
-pub mod seek_zst;
-pub mod seek_zst_builtin;
 
 pub use command::Open;
 pub use opts::{overlay_opts, parse_opts};
