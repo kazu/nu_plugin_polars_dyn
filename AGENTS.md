@@ -12,7 +12,8 @@ nushell の polars plugin の fork。Python 無しで polars をシェルとし�
    この checkout で branch → 実装 → ゲート → `make_pr` / `ci` → review)。worktree は作らない。
    `done` と `merge` は kazu だけ
 
-`docs/` は利用者向け。開発中の仕様は `docs.dev/` に置く。
+`docs/` は利用者向けで**英語**。開発中の仕様は `docs.dev/` に日本語で置く。README は
+`README.ja.md`(日本語)が正で、直したら `README.md` にも反映する。
 
 ## ビルドとゲート
 
