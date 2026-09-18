@@ -122,7 +122,7 @@ nu-parser = { version = "=0.114.1", features = ["plugin"] }
 nu-command = { version = "=0.114.1", features = ["plugin"] }
 nu-plugin-test-support = "=0.114.1"
 
-seekzstdsep = "=0.5.0"
+seekzstdsep = "=0.6.0"
 tempfile = "3.27"
 
 [lints.clippy]

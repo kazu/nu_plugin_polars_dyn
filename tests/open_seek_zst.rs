@@ -529,3 +529,108 @@ fn ndjson_seek_zst_overwrites_the_schema_as_the_plain_file_does() {
         "expected the missing column to be named, got {stderr}"
     );
 }
+
+/// Writes `text` as a `.seek.zst` whose frames are cut by bytes alone, so each holds whatever
+/// record count `frame_size` leaves it, and returns the plain file and the `.seek.zst`.
+///
+/// `text` is short records followed by long ones, so frame 0 holds more records than the frames
+/// after it. Fails unless a read of the whole file through a verifying reader is refused, which is
+/// what makes it a file the scan has to refuse too. The limit multiplier is raised from the default
+/// 4: the compressor refuses a text longer than `frame_size` times it, and this one is longer than
+/// 256 * 4 bytes.
+fn uneven_fixture(dir: &TempDir, name: &str, text: &str) -> (PathBuf, PathBuf) {
+    let plain = dir.path().join(name);
+    std::fs::write(&plain, text).expect("write the plain file");
+
+    let seek_zst = dir.path().join(format!("{name}.seek.zst"));
+    let mut compressed = Vec::new();
+    convert_to_seekable_zst_reader(
+        text.as_bytes(),
+        &mut compressed,
+        256,
+        false,
+        b"\n",
+        Some(128),
+    )
+    .expect("compress to seekable zstd");
+    std::fs::write(&seek_zst, compressed).expect("write the seek.zst file");
+
+    let refused = RecordReader::open(seek_zst.clone(), b"\n")
+        .expect("open the seek.zst fixture")
+        .verifying()
+        .into_records()
+        .any(|record| record.is_err());
+    assert!(refused, "{name} holds the same record count in every frame");
+
+    (plain, seek_zst)
+}
+
+/// 60 rows whose `name` is one byte for the first 30 and 40 bytes after.
+fn growing_rows() -> impl Iterator<Item = (usize, String)> {
+    (0..60).map(|i| (i, "x".repeat(if i < 30 { 1 } else { 40 })))
+}
+
+fn uneven_csv_text() -> String {
+    let rows: String = growing_rows()
+        .map(|(i, name)| format!("{i},{name}\n"))
+        .collect();
+    format!("n,name\n{rows}")
+}
+
+fn uneven_ndjson_text() -> String {
+    growing_rows()
+        .map(|(i, name)| format!("{{\"n\":{i},\"name\":\"{name}\"}}\n"))
+        .collect()
+}
+
+/// A frame before the last holding fewer records than frame 0 is refused, naming the counts,
+/// rather than read into the next frame's records.
+#[test]
+fn seek_zst_refuses_a_frame_holding_fewer_records() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for (name, text) in [
+        ("uneven.csv", uneven_csv_text()),
+        ("uneven.jsonl", uneven_ndjson_text()),
+    ] {
+        let (_, seek_zst) = uneven_fixture(&dir, name, &text);
+        let path = seek_zst.display();
+        let stderr = fail_nu(&format!("polars_dyn open {path} | polars_dyn collect"));
+        assert!(
+            stderr.contains("records rather than"),
+            "expected {name} to be refused for its frame counts, got {stderr}"
+        );
+    }
+}
+
+/// `verify_frames: false` reads the same file without the check, and what it answers is not what
+/// the plain file holds.
+#[test]
+fn seek_zst_reads_unchecked_frames_when_asked() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for (name, text) in [
+        ("uneven.csv", uneven_csv_text()),
+        ("uneven.jsonl", uneven_ndjson_text()),
+    ] {
+        let (plain, seek_zst) = uneven_fixture(&dir, name, &text);
+        let path = seek_zst.display();
+        let unchecked = run_nu(&format!(
+            "polars_dyn open {path} --opts {{verify_frames: false}} | polars_dyn collect \
+             | polars_dyn into-nu | to nuon"
+        ));
+        assert_ne!(unchecked.trim(), collect_nuon(&plain), "{name}");
+    }
+}
+
+#[test]
+fn seek_zst_refuses_a_verify_frames_that_is_not_a_bool() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (_, seek_zst) = fixture(&dir, "events.jsonl", &ndjson_text(), 256);
+    let path = seek_zst.display();
+    let stderr = fail_nu(&format!(
+        "polars_dyn open {path} --opts {{verify_frames: 1}} | polars_dyn collect"
+    ));
+    assert!(
+        stderr.contains("`verify_frames` takes a bool"),
+        "expected verify_frames: 1 to be refused, got {stderr}"
+    );
+}

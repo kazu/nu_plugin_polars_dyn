@@ -21,9 +21,13 @@
 //! fill: `pre_slice` arrives as `n_rows`, `projection` as the columns, and the schema is settled
 //! from the first frame. So there is nothing for `--opts` to set here.
 //!
+//! One key is added beside the format's options. `verify_frames: false` reads the frames without
+//! the check [`SeekZstScan`] makes by default; read on one thread, the check costs a few percent.
+//!
 //! ```nu
 //! polars_dyn open events.jsonl.seek.zst
 //! polars_dyn open data.csv.seek.zst --opts {has_header: false}
+//! polars_dyn open events.jsonl.seek.zst --opts {verify_frames: false}
 //! ```
 
 use std::io::Cursor;
@@ -52,9 +56,13 @@ impl ScanSource for CsvSeekZst {
     }
 
     fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let options = format_opts(CsvReadOptions::default(), opts)?;
+        let (options, verify_frames) = format_opts(CsvReadOptions::default(), opts)?;
         reject_options_the_frames_cannot_honour(&options)?;
-        SeekZstScan::lazy_frame(PathBuf::from(source), Box::new(CsvFrames { options }))
+        SeekZstScan::lazy_frame_with(
+            PathBuf::from(source),
+            Box::new(CsvFrames { options }),
+            verify_frames,
+        )
     }
 }
 
@@ -127,8 +135,12 @@ impl ScanSource for NdJsonSeekZst {
     }
 
     fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let options = format_opts(ndjson_defaults(), opts)?;
-        SeekZstScan::lazy_frame(PathBuf::from(source), Box::new(NdJsonFrames { options }))
+        let (options, verify_frames) = format_opts(ndjson_defaults(), opts)?;
+        SeekZstScan::lazy_frame_with(
+            PathBuf::from(source),
+            Box::new(NdJsonFrames { options }),
+            verify_frames,
+        )
     }
 }
 
@@ -187,13 +199,21 @@ impl FrameParser for NdJsonFrames {
     }
 }
 
-/// Deserializes the format's options from `--opts`, which holds nothing else.
-fn format_opts<T>(defaults: T, opts: &[u8]) -> PolarsResult<T>
+/// The one key `--opts` holds beside the format's options: `false` reads the frames without
+/// checking their record counts.
+const VERIFY_FRAMES: &str = "verify_frames";
+
+/// Deserializes the format's options from `--opts`, and whether to check the record counts of the
+/// frames, which is the default.
+fn format_opts<T>(defaults: T, opts: &[u8]) -> PolarsResult<(T, bool)>
 where
     T: serde::Serialize + serde::de::DeserializeOwned,
 {
-    overlay_opts(
-        defaults,
-        &Value::Object(nu_plugin_polars::scan::parse_opts(opts)?),
-    )
+    let mut opts = nu_plugin_polars::scan::parse_opts(opts)?;
+    let verify_frames = match opts.remove(VERIFY_FRAMES) {
+        None => true,
+        Some(Value::Bool(verify)) => verify,
+        Some(other) => polars_bail!(ComputeError: "`{VERIFY_FRAMES}` takes a bool, not {other}"),
+    };
+    Ok((overlay_opts(defaults, &Value::Object(opts))?, verify_frames))
 }

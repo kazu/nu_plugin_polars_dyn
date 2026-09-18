@@ -5828,9 +5828,9 @@ dependencies = [
 
 [[package]]
 name = "seekzstdsep"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d19f6a88185c1e77a298b45a0ff2ee2283e74270afa42ba1ea42a0c61b2382c"
+checksum = "07c285d4067a08ce6826166f140d7818c7f031b02790897bec562cf3c15fb891"
 dependencies = [
  "anyhow",
  "clap",
