@@ -13,6 +13,7 @@ use command::{
     datetime::datetime_commands, index::index_commands, integer::integer_commands,
     list::list_commands, selector::selector_commands, string::string_commands, stub::PolarsCmd,
 };
+use log::debug;
 use nu_plugin::{EngineInterface, MsgPackSerializer, Plugin, PluginCommand, serve_plugin};
 
 mod cache;
@@ -47,9 +48,9 @@ impl PolarsPlugin {
         })
     }
 
-    /// Turns the plugin GC off the first time the plugin holds an engine. Cached values live
-    /// until `polars_dyn store-rm` or the end of the plugin process, so the engine must not stop
-    /// the plugin while any value is cached.
+    /// Turns the plugin GC off the first time the plugin holds an engine. A cached value lives
+    /// until the engine reports the drop of every value the plugin handed out for it, so the
+    /// engine must not stop the plugin while any value is cached.
     pub(crate) fn disable_gc_once(&self, engine: &EngineInterface) -> Result<(), ShellError> {
         if self.gc_disabled.get().is_some() {
             return Ok(());
@@ -84,6 +85,17 @@ impl Plugin for PolarsPlugin {
 
         commands.append(&mut cache_commands());
         commands
+    }
+
+    fn custom_value_dropped(
+        &self,
+        _engine: &EngineInterface,
+        custom_value: Box<dyn CustomValue>,
+    ) -> Result<(), LabeledError> {
+        debug!("custom_value_dropped called {custom_value:?}");
+        let id = CustomValueType::try_from_custom_value(custom_value, Span::unknown())?.id();
+        let _ = self.cache.remove(&id, false);
+        Ok(())
     }
 
     fn custom_value_to_base_value(

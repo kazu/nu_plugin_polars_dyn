@@ -95,7 +95,7 @@ impl PluginCommand for LazyCollect {
                 ))
             }
             PolarsPluginObject::NuDataFrame(df) => {
-                let cv = plugin.cache.get(&df.id)?.ok_or_else(|| {
+                let cv = plugin.cache.get(&df.id, true)?.ok_or_else(|| {
                     ShellError::Generic(GenericError::new(
                         format!("Failed to get cached value {}", df.id),
                         "",

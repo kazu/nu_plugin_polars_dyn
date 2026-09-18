@@ -58,7 +58,7 @@ fn remove_cache_entry(plugin: &PolarsPlugin, key: &str, span: Span) -> Result<Va
     let key = as_uuid(key, span)?;
     let msg = plugin
         .cache
-        .remove(&key)?
+        .remove(&key, true)?
         .map(|_| format!("Removed: {key}"))
         .unwrap_or_else(|| format!("No value found for key: {key}"));
     Ok(Value::string(msg, span))
