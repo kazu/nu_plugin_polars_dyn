@@ -274,6 +274,10 @@ plugin が publish するバイナリは polars 自身が読む 4 形式だけ�
    状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。
    `seekzstdsep` は crates.io から exact semver で依存する。
 
+   レコード番号から frame を引くのは frame ごとのレコード数が揃っていることが前提。**この前提は
+   デフォルトで検査する。**何を拒むかは seekzstdsep の `RecordReader::verifying` の仕様に従い、
+   こちらでは言い直さない。
+
    `n_rows` は frame 範囲に写像しない。frame が何レコード持つかは読むまで分からないので、
    frame のバッチ単位で読みながら行数が足りたところで打ち切る。`n_rows` はファイルの行に対する
    指定なので、predicate より**先**に当てる(`slice 0 26 | filter ...` は「先頭 26 行のうち
@@ -304,6 +308,10 @@ plugin が publish するバイナリは polars 自身が読む 4 形式だけ�
    `scan` キー(`UnifiedScanArgs`)も受けない。中身の大半は polars 自身の file scan のもので
    anonymous scan には届かず、届くもの(`pre_slice` → `n_rows`、`projection` → 列)は
    クエリ側が埋めるため。
+
+   逆に 1 つだけ独自のキーを足す。`verify_frames`(bool、デフォルト `true`)は、1 の検査を
+   外す。形式の option struct に渡す前に抜き取る。1 スレッドで測ると、検査のコストは
+   2〜6%(300 万行、frame 128KiB)。デフォルトの並列読みでは差が測れなかった。
 
    残りは素通しするが、`infer_schema_length` は schema を決める frame 0 までしか見ない
    (plain との差。詳細は `seekzstdsep-scan/src/seek_zst.rs` のモジュール doc)。
