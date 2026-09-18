@@ -194,7 +194,7 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 - **crates.io に publish する**(他の人が `cargo install` で入れられるように)。crate 名は
   nu plugin の慣習どおりバイナリ名と同じ `nu_plugin_polars_dyn`(crates.io で空き確認済)。
-  `version = "0.1.0"`、`edition = "2024"`、`rust-version = "1.95.0"`、`license = "MIT"`
+  `version` は `0.1.0` から、`edition = "2024"`、`rust-version = "1.95.0"`、`license = "MIT"`
   (本家の LICENSE は残す)、`authors` と `repository` は kazu のもの。
 - publish する manifest には path / git 依存を置けない(cargo が版の無い依存を拒む)ので、
   logfmt のような非公開の scan source は published crate に入れない。registry は静的配列では

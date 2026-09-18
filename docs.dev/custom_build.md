@@ -88,8 +88,10 @@ cargo にとっては**別 source の別 package**になり、`ScanSource` が 2
 解決される。未 publish でも効くことは実測で確かめた(`tests/custom_build.rs` の
 `a_crate_taking_the_plugin_from_crates_io_builds`)。
 
-**この形は、その版の tag が push されていて初めて動く。**`0.1.0` の tag はまだ無いので、
-今日のデフォルトの形は依存を解決できない。release ごとに `<version>` の tag を打つこと。
+**この形は、その版の tag が push されていて初めて動く。**release ごとに、`Cargo.toml` の
+`version` を上げた commit に `<version>` の tag(`v` 無し)を打つこと。tag の版と `version` が
+食い違うと、ビルダーは `version` の方の tag を指す(`0.1.1` の tag は `version = "0.1.0"` の
+commit に打たれていて、その形になっている)。
 
 環境変数 `NU_POLARS_DYN_SOURCE` にディレクトリを渡すと、そこへの path 依存に差し替わる。
 tag がまだ無い版に対して使うための逃げ道で、`tests/custom_build.rs` はこれで手元の checkout に
