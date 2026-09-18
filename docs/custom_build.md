@@ -20,7 +20,7 @@ cargo build --release --bin nu-polars-dyn-build
 That leaves `~/.cargo/target/release/nu-polars-dyn-build`.
 
 Once the plugin is published, `cargo install nu_plugin_polars_dyn --locked` installs the builder as
-well, next to the plugin in `~/.cargo/bin/`. **`0.1.0` is not published yet.**
+well, next to the plugin in `~/.cargo/bin/`. **It is not published yet.**
 
 ## 2. Write the scan source crate
 
@@ -130,7 +130,7 @@ $env.NU_POLARS_DYN_SOURCE = "/path/to/nu_plugin_polars_dyn"
 nu-polars-dyn-build my_scan_source --path my_scan_source=../my_scan_source
 ```
 
-The `0.1.0` tag is pushed, so this is not needed for that version.
+Every released version has its tag pushed, so this is only needed for an unreleased checkout.
 
 ## 4. Register it and use it
 
