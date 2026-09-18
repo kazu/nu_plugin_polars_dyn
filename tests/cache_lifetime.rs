@@ -1,5 +1,5 @@
-//! Cached values stay alive until `polars_dyn store-rm` or the end of the plugin process.
-//! Runs the `nu` on `PATH` against the built plugin binary.
+//! A cached value stays alive as long as nushell holds a handle to it, and `polars_dyn store-rm`
+//! removes one regardless. Runs the `nu` on `PATH` against the built plugin binary.
 
 use std::process::Command;
 
@@ -42,6 +42,18 @@ fn dataframe_survives_a_dropped_copy_with_the_same_id() {
          $df | polars_dyn into-nu | to nuon",
     );
     assert_eq!(out.trim(), "[[a, b]; [1, 2], [3, 4]]");
+}
+
+#[test]
+fn a_repeated_pipeline_does_not_grow_the_store() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let csv = dir.path().join("x.csv").display().to_string();
+    let out = run_nu(&format!(
+        "[[a b];[1 2] [3 4]] | to csv | save {csv}; \
+         for _ in 1..20 {{ polars_dyn open {csv} | polars_dyn collect | ignore }}; \
+         polars_dyn store-ls | length"
+    ));
+    assert_eq!(out.trim(), "0");
 }
 
 #[test]

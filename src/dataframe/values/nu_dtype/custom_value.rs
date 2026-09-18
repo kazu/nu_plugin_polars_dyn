@@ -37,6 +37,10 @@ impl CustomValue for NuDataTypeCustomValue {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn notify_plugin_on_drop(&self) -> bool {
+        true
+    }
 }
 
 impl PolarsPluginCustomValue for NuDataTypeCustomValue {

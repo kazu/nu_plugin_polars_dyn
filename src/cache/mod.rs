@@ -22,6 +22,10 @@ pub struct CacheValue {
     pub value: PolarsPluginObject,
     pub created: DateTime<FixedOffset>,
     pub span: Span,
+    /// How many values carrying this id the plugin has handed to the engine and has not been
+    /// told about the drop of. The engine collapses its own clones, so it notifies once per
+    /// value the plugin sent.
+    pub reference_count: i16,
 }
 
 #[derive(Default)]
@@ -39,16 +43,32 @@ impl Cache {
         })
     }
 
-    /// Removes an item from the plugin cache.
-    pub fn remove(&self, key: &Uuid) -> Result<Option<CacheValue>, ShellError> {
+    /// Drops one reference to an entry, and removes it once the last one is gone, or right away
+    /// when `force` is set.
+    pub fn remove(&self, key: &Uuid, force: bool) -> Result<Option<CacheValue>, ShellError> {
         let mut lock = self.lock()?;
-        let removed = lock.remove(key);
-        debug!("PolarsPlugin: removing {key} from cache: {removed:?}");
+
+        let reference_count = lock.get_mut(key).map(|cache_value| {
+            cache_value.reference_count -= 1;
+            cache_value.reference_count
+        });
+
+        let removed = if force || reference_count.unwrap_or_default() < 1 {
+            let removed = lock.remove(key);
+            debug!("PolarsPlugin: removing {key} from cache: {removed:?}");
+            removed
+        } else {
+            debug!("PolarsPlugin: decrementing reference count for {key}");
+            None
+        };
+
         drop(lock);
         Ok(removed)
     }
 
-    /// Inserts an item into the plugin cache.
+    /// Inserts an item into the plugin cache, counting one reference for the value the caller is
+    /// about to hand to the engine. An id that is already cached is counted again rather than
+    /// reset, since the caller is handing out a second value for it.
     pub fn insert(
         &self,
         uuid: Uuid,
@@ -57,20 +77,32 @@ impl Cache {
     ) -> Result<Option<CacheValue>, ShellError> {
         let mut lock = self.lock()?;
         debug!("PolarsPlugin: Inserting {uuid} into cache: {value:?}");
+        let reference_count = lock
+            .get(&uuid)
+            .map(|cache_value| cache_value.reference_count + 1)
+            .unwrap_or(1);
         let cache_value = CacheValue {
             uuid,
             value,
             created: Local::now().into(),
             span,
+            reference_count,
         };
         let result = lock.insert(uuid, cache_value);
         drop(lock);
         Ok(result)
     }
 
-    pub fn get(&self, uuid: &Uuid) -> Result<Option<CacheValue>, ShellError> {
-        let lock = self.lock()?;
-        let result = lock.get(uuid).cloned();
+    /// Reads an entry. `increment` counts one more reference, and is for callers that hand the
+    /// cached value to the engine again without going through [`Cache::insert`].
+    pub fn get(&self, uuid: &Uuid, increment: bool) -> Result<Option<CacheValue>, ShellError> {
+        let mut lock = self.lock()?;
+        let result = lock.get_mut(uuid).map(|cv| {
+            if increment {
+                cv.reference_count += 1;
+            }
+            cv.clone()
+        });
         drop(lock);
         Ok(result)
     }
@@ -111,7 +143,7 @@ pub trait Cacheable: Sized + Clone {
     }
 
     fn get_cached(plugin: &PolarsPlugin, id: &Uuid) -> Result<Option<Self>, ShellError> {
-        if let Some(cache_value) = plugin.cache.get(id)? {
+        if let Some(cache_value) = plugin.cache.get(id, false)? {
             Ok(Some(Self::from_cache_value(cache_value.value)?))
         } else {
             Ok(None)
