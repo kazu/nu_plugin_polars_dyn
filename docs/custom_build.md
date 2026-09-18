@@ -108,7 +108,7 @@ crate は何本でも並べられる:
 nu-polars-dyn-build a b c --path a=../a --git b=https://example.com/b
 ```
 
-| flag | 意味 |
+| オプション | 意味 |
 |---|---|
 | `--path <name>=<dir>` | その crate をディレクトリから取る |
 | `--git <name>=<url>` | その crate を git から取る |
