@@ -157,11 +157,19 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 - 「UUID → 本体」の表は残す。`AnonymousScan` を含む LazyFrame は trait object を抱えて
   直列化できない(上流 issue #20602)ので、plugin プロセスの外へ出せるのは handle だけ。
-- 消すもの: 参照カウント、`custom_value_dropped` の drop 通知、insert / remove ごとの
-  plugin GC の on / off(`set_gc_disabled` の往復)、`store-get`。plugin GC は起動時に
-  1 回 off にする。値は `store-rm` で明示的に消すか plugin 終了まで生きる。
+- 消すもの: insert / remove ごとの plugin GC の on / off(`set_gc_disabled` の往復)、
+  `store-get`。plugin GC は起動時に 1 回 off にする(`PolarsPlugin::disable_gc_once`)。
+- 表の追い出しは参照カウントと `custom_value_dropped` の drop 通知でやる。nu へ値を 1 つ返す
+  たびに数えるので、`Cache::insert` は新しい id なら 1、既にある id なら加算する
+  (`polars_dyn into-df` のように同じ id をもう一度返す経路がある)。同じ id を再度返すだけで
+  `insert` を通らない `polars_dyn collect` は `Cache::get` で加算する。engine から drop 通知が
+  来たら減らし、0 で表から消す。nu 側の clone は engine が数えていて、最後の 1 個が落ちたとき
+  だけ通知が来るので、plugin 側は「返した回数」だけを数えればいい。
+  採らなかった案: 表に上限 / TTL / LRU を置く(生きている handle の先が落ちる)、表そのものを
+  持たない(上記のとおり handle しか渡せない)、`store-rm --all` を足して手で掃く(解放を
+  利用者の作業にするだけで、忘れれば同じ)。
 - 残すもの: `NuDataFrame` / `NuLazyFrame` / `NuExpression` 等の値型、nu の table と
-  DataFrame の相互変換、`store-ls` / `store-rm`(参照カウントの代わりの手動の掃き出し口)。
+  DataFrame の相互変換、`store-ls` / `store-rm`(drop 通知が届かない値を手で掃き出す口)。
 - eager / lazy の制御は現状維持。明示の切り替え(`collect` / `into-lazy` / `into-df`)と、
   入力の種類が出力に引き継がれる規則(`from_eager` / `from_lazy` の flag と
   `cache_and_to_value` の判定)はそのまま残す。
@@ -213,7 +221,7 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 - 本家の `PolarsPluginObject` をそのまま使う。変種は `NuDataFrame` / `NuLazyFrame` /
   `NuExpression` / `NuLazyGroupBy` / `NuWhen` / `NuDataType` / `NuSchema` / `NuSelector`。
   Series(eager)は本家どおり 1 列の `NuDataFrame` で表し、変種を足さない。
-- `NuPolarsTestData` は消す(cache の参照カウントのテスト専用)。
+- `NuPolarsTestData` は消す(GC 往復の単体テスト専用の変種で、その往復ごと消えた)。
 - 名前も変えない。**消さないコードは触らない**。残すコードは本家との差分を最小に保ち、
   上流の修正(polars 版の追従など)を cherry-pick できる状態にする。これは fork 全体の
   方針。
@@ -221,7 +229,7 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 ## 消すもの・残すもの
 
 消す:
-- `open.rs`、cache の参照カウント・GC 往復・`store-get`、`NuPolarsTestData`(上の各節)。
+- `open.rs`、cache の GC 往復・`store-get`、`NuPolarsTestData`(上の各節)。
 - plugin 側の cloud 認証層: `src/cloud/`(aws / azure / gcp)、`resource.rs` が scheme ごとに
   認証を組む処理(scheme 付きの path には `CloudOptions::default()` を渡し、認証は polars が
   環境変数から拾う。`save` の cloud sink の経路はそのまま)、

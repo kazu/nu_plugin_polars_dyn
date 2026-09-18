@@ -102,7 +102,9 @@ polars_dyn call plugins/libmy_plugin.so distance (polars_dyn col x) (polars_dyn 
 ## `polars_dyn store-ls` / `store-rm`
 
 Lists the polars objects the plugin holds, and removes one explicitly. What nushell holds is a
-handle; the object itself stays in the plugin process.
+handle; the object itself stays in the plugin process. The plugin frees an object once nushell
+has dropped every handle to it, so `store-rm` is for the ones still held — by a variable, say, or
+by the last value a command printed.
 
 ```nu
 polars_dyn store-ls
