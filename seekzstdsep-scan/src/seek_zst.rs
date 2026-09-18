@@ -74,17 +74,23 @@ impl SeekZstScan {
     ///
     /// Reads that one frame now; the rest of the file is left until the frame is collected.
     pub fn lazy_frame(path: PathBuf, parser: Box<dyn FrameParser>) -> PolarsResult<LazyFrame> {
-        let scan = Self { path, parser };
-        let schema = scan.infer_schema()?;
-        LazyFrame::anonymous_scan(
-            Arc::new(scan),
-            ScanArgsAnonymous {
-                schema: Some(schema),
-                ..Default::default()
-            },
-        )
+        anonymous_scan(Self { path, parser })
     }
+}
 
+/// The `LazyFrame` reading `scan`, with the schema inferred from its first frame.
+fn anonymous_scan(scan: SeekZstScan) -> PolarsResult<LazyFrame> {
+    let schema = scan.infer_schema()?;
+    LazyFrame::anonymous_scan(
+        Arc::new(scan),
+        ScanArgsAnonymous {
+            schema: Some(schema),
+            ..Default::default()
+        },
+    )
+}
+
+impl SeekZstScan {
     fn infer_schema(&self) -> PolarsResult<SchemaRef> {
         let mut reader = self.reader()?;
         if reader.frame_count() == 0 {
