@@ -43,10 +43,8 @@ impl Cache {
         })
     }
 
-    /// Drops one reference to an entry, and removes it once the last one is gone.
-    ///
-    /// * `key` - The key of the cache entry to remove.
-    /// * `force` - Remove the entry even if references are left.
+    /// Drops one reference to an entry, and removes it once the last one is gone, or right away
+    /// when `force` is set.
     pub fn remove(&self, key: &Uuid, force: bool) -> Result<Option<CacheValue>, ShellError> {
         let mut lock = self.lock()?;
 
