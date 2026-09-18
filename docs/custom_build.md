@@ -83,7 +83,6 @@ polars = "=0.55.2"
 両方入れるなら:
 
 ```nu
-$env.NU_POLARS_DYN_SOURCE = "/path/to/nu_plugin_polars_dyn"
 nu-polars-dyn-build seekzstdsep_scan logfmt_scan --path seekzstdsep_scan=/path/to/nu_plugin_polars_dyn/seekzstdsep-scan --path logfmt_scan=/path/to/polars-logfmt/logfmt-scan --out ~/bin
 ```
 
@@ -128,7 +127,7 @@ $env.NU_POLARS_DYN_SOURCE = "/path/to/nu_plugin_polars_dyn"
 nu-polars-dyn-build my_scan_source --path my_scan_source=../my_scan_source
 ```
 
-`0.1.0` はまだ tag が無いので、いまはこの形で使う。
+`0.1.0` の tag は push 済みなので、その版に対しては要らない。
 
 ## 4. 登録して使う
 
