@@ -43,8 +43,11 @@ fn write_crate_taking_the_plugin_from_crates_io(dir: &Path) {
     fs::create_dir_all(dir.join("src")).expect("create the crate directory");
     fs::write(
         dir.join("Cargo.toml"),
-        "[package]\nname = \"from_crates_io\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\
-         publish = false\n\n[dependencies]\nnu_plugin_polars_dyn = \"0.1\"\n",
+        format!(
+            "[package]\nname = \"from_crates_io\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\
+             publish = false\n\n[dependencies]\nnu_plugin_polars_dyn = \"{}\"\n",
+            env!("CARGO_PKG_VERSION")
+        ),
     )
     .expect("write the manifest");
     fs::write(

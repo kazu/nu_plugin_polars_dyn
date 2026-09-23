@@ -105,6 +105,15 @@ task は agreements.md の順序で起票済みで、依存は各 task のコメ
 - ゲートの定義は toolkit.nu の 1 箇所。Makefile はそれを呼ぶだけで、cargo のコマンドを
   二重に書かない。
 
+## リリース
+
+clean な `main` で `make release version=MAJOR.MINOR.PATCH`。toolkit.nu の `release` が
+`Cargo.toml` の version、`seekzstdsep-scan` の pin、`docs/custom_build.md` の例を書き換え、
+`Cargo.lock` を更新し、`check` を通してから commit し、tag `<version>`(`v` 無し)を打って
+`gh` に `main` と tag を push する。branch は切らない。crates.io には publish しない。
+tag が要るのは `nu-polars-dyn-build` が自分の版の tag を `nu_plugin_polars_dyn` の git 依存に
+使うため。
+
 ## やらないこと
 
 - `git_task trans <id> --to done` と `git_task merge`(kazu だけ)。
