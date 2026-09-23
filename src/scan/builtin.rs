@@ -20,91 +20,76 @@ use polars_plan::dsl::{
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Map, Value};
 
-use super::{
-    ScanSource,
-    opts::{overlay_opts, parse_opts},
-};
+use super::opts::{overlay_opts, parse_opts};
 
-/// The sources every bin registers.
-pub static BUILTIN: &[&dyn ScanSource] = &[&Parquet, &Csv, &Ipc, &NdJson];
-
-pub struct Parquet;
-pub struct Csv;
-pub struct Ipc;
-pub struct NdJson;
-
-impl ScanSource for Parquet {
-    fn name(&self) -> &'static str {
-        "parquet"
-    }
-
-    fn suffixes(&self) -> &'static [&'static str] {
-        &[".parquet", ".parq", ".pq"]
-    }
-
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let (options, scan_args) = split_opts(ParquetOptions::default(), opts)?;
-        Ok(
-            DslBuilder::scan_parquet(sources(source), options, scan_args)?
-                .build()
-                .into(),
-        )
-    }
+/// A source polars reads by itself from a path or URL: globs, cloud storage and its own parallel
+/// readers come with it, which is why it takes the string instead of a [`ReadAt`](super::ReadAt).
+pub struct Builtin {
+    /// The registered name, matched against `--format`.
+    pub name: &'static str,
+    /// Matched against the end of the source string when `--format` is absent.
+    pub suffixes: &'static [&'static str],
+    /// Builds the `LazyFrame` over an absolute local path or a URL, with the `--opts` record as
+    /// JSON bytes.
+    pub scan: fn(&str, &[u8]) -> PolarsResult<LazyFrame>,
 }
 
-impl ScanSource for Csv {
-    fn name(&self) -> &'static str {
-        "csv"
-    }
+/// The sources every bin has.
+pub static BUILTIN: &[Builtin] = &[
+    Builtin {
+        name: "parquet",
+        suffixes: &[".parquet", ".parq", ".pq"],
+        scan: parquet,
+    },
+    Builtin {
+        name: "csv",
+        suffixes: &[".csv"],
+        scan: csv,
+    },
+    Builtin {
+        name: "ipc",
+        suffixes: &[".arrow", ".ipc"],
+        scan: ipc,
+    },
+    Builtin {
+        name: "ndjson",
+        suffixes: &[".ndjson", ".jsonl"],
+        scan: ndjson,
+    },
+];
 
-    fn suffixes(&self) -> &'static [&'static str] {
-        &[".csv"]
-    }
-
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let (options, scan_args) = split_opts(CsvReadOptions::default(), opts)?;
-        Ok(DslBuilder::scan_csv(sources(source), options, scan_args)?
+fn parquet(source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    let (options, scan_args) = split_opts(ParquetOptions::default(), opts)?;
+    Ok(
+        DslBuilder::scan_parquet(sources(source), options, scan_args)?
             .build()
-            .into())
-    }
+            .into(),
+    )
 }
 
-impl ScanSource for Ipc {
-    fn name(&self) -> &'static str {
-        "ipc"
-    }
-
-    fn suffixes(&self) -> &'static [&'static str] {
-        &[".arrow", ".ipc"]
-    }
-
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let (options, scan_args) = split_opts(IpcScanOptions::default(), opts)?;
-        Ok(DslBuilder::scan_ipc(sources(source), options, scan_args)?
-            .build()
-            .into())
-    }
-}
-
-impl ScanSource for NdJson {
-    fn name(&self) -> &'static str {
-        "ndjson"
-    }
-
-    fn suffixes(&self) -> &'static [&'static str] {
-        &[".ndjson", ".jsonl"]
-    }
-
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
-        let (options, scan_args) = split_opts(ndjson_defaults(), opts)?;
-        Ok(DslPlan::Scan {
-            sources: sources(source),
-            unified_scan_args: Box::new(scan_args),
-            scan_type: Box::new(FileScanDsl::NDJson { options }),
-            cached_ir: Default::default(),
-        }
+fn csv(source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    let (options, scan_args) = split_opts(CsvReadOptions::default(), opts)?;
+    Ok(DslBuilder::scan_csv(sources(source), options, scan_args)?
+        .build()
         .into())
+}
+
+fn ipc(source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    let (options, scan_args) = split_opts(IpcScanOptions::default(), opts)?;
+    Ok(DslBuilder::scan_ipc(sources(source), options, scan_args)?
+        .build()
+        .into())
+}
+
+fn ndjson(source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    let (options, scan_args) = split_opts(ndjson_defaults(), opts)?;
+    Ok(DslPlan::Scan {
+        sources: sources(source),
+        unified_scan_args: Box::new(scan_args),
+        scan_type: Box::new(FileScanDsl::NDJson { options }),
+        cached_ir: Default::default(),
     }
+    .into())
 }
 
 /// The values `LazyJsonLineReader::new` starts from. `NDJsonReadOptions` has no `Default` and

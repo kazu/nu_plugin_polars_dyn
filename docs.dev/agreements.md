@@ -49,8 +49,9 @@ Python 向けに作られた拡張の互換は副次的。
   もう片方が引けずクエリが黙って誤答した(task 010 の記録)。採らなかった案は
   自前 C ABI + Arrow C Data Interface(projection と predicate が `.so` に降りない)、
   別プロセス + Arrow IPC stream(同じく降りず、コピーとプロセス起動が乗る)。
-- registry の境界の入力は source の文字列とオプションの bytes に保つ。`--opts` の中身を
-  nu 側で覗かない、という一点だけが理由で、FFI を越えるためではない。
+- registry の境界の入力は source のバイト列(`ReadAt`)とオプションの bytes に保つ。`--opts` の
+  中身を nu 側で覗かない、という一点だけが理由で、FFI を越えるためではない。文字列を開くのは
+  plugin 側の仕事(「`polars_dyn open` と registry」の節)。
 
 ## `polars_dyn open` と registry
 
@@ -58,8 +59,11 @@ Python 向けに作られた拡張の互換は副次的。
 polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  → LazyFrame
 ```
 
-- `source` は文字列をそのまま実装に渡す(ローカルパス、URL、logfmt の ssh 指定など)。
-  nu 側では解釈しない。
+- `source` は built-in には文字列のまま渡す(ローカルパス、URL)。polars 自身が path / URL から
+  glob・cloud・並列 reader 込みで読み、lazy scan は path か in-memory buffer しか受けないため。
+  registry の scan source には **`ReadAt` の trait object** を渡す。文字列を開くのは plugin 側の
+  仕事で、scheme ごとに選ぶ(今はローカルファイルだけ。S3 は別 task)。random access できない
+  source(socket、pipe)は対象外で、必要になったらインターフェースを変える。
 - `--format` が無ければ、各実装が宣言する接尾辞の最長一致で決める
   (`app.logfmt.seek.zst` → `logfmt`、`x.parquet` → `parquet`)。決まらなければ登録名を
   列挙してエラー。
@@ -69,14 +73,28 @@ polars_dyn open <source: string> [--format (-f) <name>] [--opts (-o) <record>]  
 - registry の境界は trait 1 つ。返り値は LazyFrame で、collect はしない。
 
   ```rust
+  pub trait ReadAt: Send + Sync {
+      fn read_at(&self, offset: u64, buf: &mut [u8]) -> io::Result<usize>;
+      fn len(&self) -> io::Result<u64>;   // seek.zst が末尾の seek table を読むのに要る
+  }
+
   pub trait ScanSource: Send + Sync {
       fn name(&self) -> &'static str;                 // "logfmt"
       fn suffixes(&self) -> &'static [&'static str];  // [".logfmt", ".logfmt.seek.zst"]
-      fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame>;
+      fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame>;
   }
   ```
 
-- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]`。built-in は
+  `ReadAt` は `&self` で読むので `Arc` で共有するだけで frame 並列に使え、S3 の range GET に
+  そのまま写る。`File` の実装は unix の `FileExt::read_at`、Windows の `FileExt::seek_read`。
+  参考にしたのは polars-logfmt の `SeekableVfsFile`(文字列の解決と読み口を分ける)だが、
+  `Read + Seek` + `clone_handle` ではなく offset 指定の読みを境界にした。
+  built-in は文字列が要るので trait の外に出し、`builtin::Builtin`(名前・接尾辞・
+  `fn(&str, &[u8])`)の固定表として registry が常に持つ。採らなかった案: `ScanSource` に
+  「文字列を受ける」「`ReadAt` を受ける」の 2 種の `scan` を持たせる(どの実装も片方しか
+  使わない)。
+
+- registry は `PolarsPlugin` 構築時に bin から渡す `&[&dyn ScanSource]` に built-in を足したもの。built-in は
   **polars 自身が読む parquet / csv / ipc / ndjson の 4 つだけ**で、`--opts` の JSON を
   `polars-io` のオプション struct(`CsvReadOptions` 等。`serde` feature で `Deserialize` を
   derive している)に直接食わせる。形式ごとの flag 解析を fork には持たない。
@@ -122,7 +140,7 @@ nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
   publish 前と、この repo 自身の統合テストのための逃げ道。採らなかった案は利用者に path を
   渡させること(ビルダーが自分の出自を知っているのに聞く理由が無い)。
 - `bin` は `nu_plugin_polars::serve(extra)` を呼ぶだけ。`serve` は env_logger の初期化、
-  `POLARS_ALLOW_EXTENSION` の設定、`BUILTIN` と `extra` の連結、`PolarsPlugin::new` と
+  `POLARS_ALLOW_EXTENSION` の設定、`extra` の平坦化(built-in は registry が常に持つ)、`PolarsPlugin::new` と
   `serve_plugin` をまとめた 1 本で、published の `src/main.rs` も同じものを呼ぶ。
 
 ## `polars_dyn call`(expression plugin)
@@ -271,7 +289,9 @@ plugin が publish するバイナリは polars 自身が読む 4 形式だけ�
 1. **frame 層は `seekzstdsep-scan` crate に置く。** frame ごとの読み出し、rayon の frame 並列、
    chunk の連結を持つ。パーサは「1 frame の `&[u8]` と frame 番号と schema → `DataFrame`」と
    「schema」の 2 関数を注入する(frame 境界 = レコード境界なので、パーサは frame をまたぐ
-   状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。
+   状態を持たない)。frame は `seekzstdsep` の `RecordReader` でレコード番号から読む。reader は
+   `RecordReader::from_reader` に、plugin から渡された `ReadAt` を offset 付きの cursor で
+   `Read + Seek` にして渡す(thread ごとに cursor 1 つ、handle は `Arc` で共有)。
    `seekzstdsep` は crates.io から exact semver で依存する。
 
    レコード番号から frame を引くのは frame ごとのレコード数が揃っていることが前提。**この前提は

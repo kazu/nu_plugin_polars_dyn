@@ -16,9 +16,10 @@ explains one.
 polars_dyn open <source> [--format (-f) <name>] [--opts (-o) <record>]  → LazyFrame
 ```
 
-`source` is handed to the scan source as it stands, uninterpreted: a local path, a URL such as
-`s3://...`, or whatever else that scan source reads. Nothing is collected, so what comes back is a
-`LazyFrame` that has not read anything yet.
+`source` is a local path or a URL such as `s3://...`. A built-in format hands it to polars as it
+stands; any other scan source is given the opened file, so for those only a local path works in
+this build. Nothing is collected, so what comes back is a `LazyFrame` that has not read anything
+yet.
 
 ### `--format`
 

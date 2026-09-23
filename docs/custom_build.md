@@ -33,7 +33,9 @@ pub fn scan_sources() -> &'static [&'static dyn nu_plugin_polars::scan::ScanSour
 `ScanSource` is the trait that turns one format into a `LazyFrame`. It has three methods.
 
 ```rust
-use nu_plugin_polars::scan::{ScanSource, parse_opts};
+use std::sync::Arc;
+
+use nu_plugin_polars::scan::{ReadAt, ScanSource, parse_opts};
 use polars::prelude::{LazyFrame, PolarsResult};
 
 pub fn scan_sources() -> &'static [&'static dyn ScanSource] {
@@ -54,9 +56,10 @@ impl ScanSource for MyFormat {
         &[".myfmt"]
     }
 
-    /// `source` is an absolute path, or the URL as given when it carries a scheme. `opts` is the
+    /// `source` is the file, opened by the plugin and read by offset (`read_at`, `len`); it is
+    /// `Send + Sync`, so frames can be read in parallel through the one handle. `opts` is the
     /// `--opts` record as JSON bytes, empty when it was omitted. Do not collect.
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let opts = parse_opts(opts)?; // serde_json::Map
         todo!()
     }

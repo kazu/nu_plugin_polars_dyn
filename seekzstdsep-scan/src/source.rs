@@ -31,7 +31,7 @@
 //! ```
 
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::sync::Arc;
 
 use polars::prelude::{DataFrame, LazyFrame, PolarsResult, SchemaRef, SerReader, polars_bail};
 use polars_io::csv::read::CsvReadOptions;
@@ -39,7 +39,7 @@ use polars_io::ndjson;
 use polars_io::utils::overwrite_schema;
 
 use crate::seek_zst::{FrameParser, SeekZstScan};
-use nu_plugin_polars::scan::{ScanSource, builtin::ndjson_defaults, overlay_opts};
+use nu_plugin_polars::scan::{ReadAt, ScanSource, builtin::ndjson_defaults, overlay_opts};
 use polars_plan::dsl::NDJsonReadOptions;
 use serde_json::Value;
 
@@ -55,14 +55,10 @@ impl ScanSource for CsvSeekZst {
         &[".csv.seek.zst"]
     }
 
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let (options, verify_frames) = format_opts(CsvReadOptions::default(), opts)?;
         reject_options_the_frames_cannot_honour(&options)?;
-        SeekZstScan::lazy_frame_with(
-            PathBuf::from(source),
-            Box::new(CsvFrames { options }),
-            verify_frames,
-        )
+        SeekZstScan::lazy_frame_with(source, Box::new(CsvFrames { options }), verify_frames)
     }
 }
 
@@ -134,13 +130,9 @@ impl ScanSource for NdJsonSeekZst {
         &[".ndjson.seek.zst", ".jsonl.seek.zst"]
     }
 
-    fn scan(&self, source: &str, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let (options, verify_frames) = format_opts(ndjson_defaults(), opts)?;
-        SeekZstScan::lazy_frame_with(
-            PathBuf::from(source),
-            Box::new(NdJsonFrames { options }),
-            verify_frames,
-        )
+        SeekZstScan::lazy_frame_with(source, Box::new(NdJsonFrames { options }), verify_frames)
     }
 }
 
