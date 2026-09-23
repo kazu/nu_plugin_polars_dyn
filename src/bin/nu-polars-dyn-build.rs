@@ -1,9 +1,5 @@
-//! Builds a `nu_plugin_polars_dyn` with the given scan source crates compiled in.
-//!
-//! ```text
-//! nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
-//!                     [--out <dir>] [--debug]
-//! ```
+//! Builds a `nu_plugin_polars_dyn` with the given scan source crates compiled in. The
+//! arguments are documented by `nu-polars-dyn-build --help`.
 //!
 //! Each crate must expose `pub fn scan_sources() -> &'static [&'static ScanSource]`. The
 //! generated project, and why it pins `nu_plugin_polars_dyn` the way it does, are in
@@ -18,8 +14,7 @@ use std::{
     process::{Command, ExitCode},
 };
 
-const USAGE: &str = "usage: nu-polars-dyn-build <crate>... \
-                     [--path <name>=<dir>]... [--git <name>=<url>]... [--out <dir>] [--debug]";
+use clap::Parser;
 
 /// The plugin crate the generated project builds against, overriding the repository this
 /// builder was compiled from. A directory, taken as a path dependency.
@@ -42,6 +37,30 @@ enum Source {
     Git(String),
 }
 
+/// Builds a `nu_plugin_polars_dyn` with the given scan source crates compiled in.
+///
+/// The binary is placed in `--out` as `nu_plugin_polars_dyn`, overwriting one already there.
+/// cargo's output passes straight through, and a failed build returns cargo's exit code and
+/// leaves the generated project behind, printing its path to stderr.
+#[derive(Parser)]
+struct Cli {
+    /// The crates to compile in: crates.io crate names, without a version.
+    #[arg(required = true, value_name = "crate")]
+    crates: Vec<String>,
+    /// Take that crate from a directory instead of crates.io.
+    #[arg(long, value_name = "name=dir")]
+    path: Vec<String>,
+    /// Take that crate from a git repository instead of crates.io.
+    #[arg(long, value_name = "name=url")]
+    git: Vec<String>,
+    /// Where to put the binary [default: the current directory].
+    #[arg(long, value_name = "dir")]
+    out: Option<PathBuf>,
+    /// Debug build instead of release.
+    #[arg(long)]
+    debug: bool,
+}
+
 struct Args {
     /// The crates to compile in, in the order they were given.
     crates: Vec<String>,
@@ -62,7 +81,7 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<ExitCode, String> {
-    let args = parse_args(env::args().skip(1))?;
+    let args = parse_args(Cli::parse())?;
     let project = env::temp_dir().join(format!("nu-polars-dyn-build-{}", std::process::id()));
     write_project(&project, &args)?;
 
@@ -94,36 +113,25 @@ fn run() -> Result<ExitCode, String> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn parse_args(argv: impl Iterator<Item = String>) -> Result<Args, String> {
-    let mut crates = Vec::new();
+/// Checks what clap does not: the names, the `<name>=<value>` pairs, and `--out`.
+fn parse_args(cli: Cli) -> Result<Args, String> {
+    let crates = cli
+        .crates
+        .iter()
+        .map(|name| check_crate_name(name))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let mut overrides = BTreeMap::new();
-    let mut out = None;
-    let mut debug = false;
-
-    let mut argv = argv;
-    while let Some(arg) = argv.next() {
-        let mut value = |flag: &str| {
-            argv.next()
-                .ok_or_else(|| format!("{flag} needs a value\n{USAGE}"))
-        };
-        match arg.as_str() {
-            "--debug" => debug = true,
-            "--out" => out = Some(PathBuf::from(value("--out")?)),
-            "--path" => {
-                let (name, dir) = split_override("--path", &value("--path")?)?;
-                overrides.insert(name, Source::Path(absolute(&dir)?));
-            }
-            "--git" => {
-                let (name, url) = split_override("--git", &value("--git")?)?;
-                overrides.insert(name, Source::Git(url));
-            }
-            _ if arg.starts_with('-') => return Err(format!("unknown flag {arg}\n{USAGE}")),
-            _ => crates.push(check_crate_name(&arg)?),
-        }
+    for arg in &cli.path {
+        let (name, dir) = split_override("--path", arg)?;
+        overrides.insert(name, Source::Path(absolute(&dir)?));
     }
-
-    if crates.is_empty() {
-        return Err(format!("no crate given\n{USAGE}"));
+    for arg in &cli.git {
+        let (name, url) = split_override("--git", arg)?;
+        if overrides.contains_key(&name) {
+            return Err(format!("`{name}` is given to both --path and --git"));
+        }
+        overrides.insert(name, Source::Git(url));
     }
     if let Some(name) = overrides.keys().find(|name| !crates.contains(name)) {
         return Err(format!(
@@ -131,7 +139,7 @@ fn parse_args(argv: impl Iterator<Item = String>) -> Result<Args, String> {
         ));
     }
 
-    let out = match out {
+    let out = match cli.out {
         Some(out) => out,
         None => env::current_dir().map_err(|e| format!("current directory: {e}"))?,
     };
@@ -143,7 +151,7 @@ fn parse_args(argv: impl Iterator<Item = String>) -> Result<Args, String> {
         crates,
         overrides,
         out,
-        debug,
+        debug: cli.debug,
     })
 }
 
@@ -151,9 +159,9 @@ fn parse_args(argv: impl Iterator<Item = String>) -> Result<Args, String> {
 fn split_override(flag: &str, arg: &str) -> Result<(String, String), String> {
     let (name, value) = arg
         .split_once('=')
-        .ok_or_else(|| format!("{flag} takes <name>=<value>, got `{arg}`\n{USAGE}"))?;
+        .ok_or_else(|| format!("{flag} takes <name>=<value>, got `{arg}`"))?;
     if value.is_empty() {
-        return Err(format!("{flag} {name}= has no value\n{USAGE}"));
+        return Err(format!("{flag} {name}= has no value"));
     }
     Ok((check_crate_name(name)?, value.to_string()))
 }
@@ -172,13 +180,13 @@ fn absolute(dir: &str) -> Result<String, String> {
 /// The name goes into a manifest key and a Rust path, so nothing but a crate name may pass.
 fn check_crate_name(name: &str) -> Result<String, String> {
     if name.is_empty() {
-        return Err(format!("empty crate name\n{USAGE}"));
+        return Err("empty crate name".to_string());
     }
     if let Some(c) = name
         .chars()
         .find(|c| !c.is_ascii_alphanumeric() && *c != '_' && *c != '-')
     {
-        return Err(format!("`{name}` is not a crate name (`{c}`)\n{USAGE}"));
+        return Err(format!("`{name}` is not a crate name (`{c}`)"));
     }
     Ok(name.to_string())
 }

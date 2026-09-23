@@ -25,12 +25,14 @@ rustc が出すものを二重に持たないため。
 ## コマンド
 
 ```
-nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
-                    [--out <dir>] [--debug]
+nu-polars-dyn-build [OPTIONS] <crate>...
 ```
 
+引数は clap(derive)で解析し、説明は `--help` が出す。以下の検査は clap の外で行う。
+
 - 位置引数は crates.io の crate 名。版は指定しない。
-- `--path` / `--git` はその名前の crate をそこから取る。位置引数に無い名前を渡すとエラー。
+- `--path` / `--git` はその名前の crate をそこから取る。位置引数に無い名前、または両方に渡した
+  名前はエラー。
 - `--out` のデフォルトはカレントディレクトリ。既にある `nu_plugin_polars_dyn` は上書きする。
 - `--debug` が無ければ release。cargo の出力はそのまま流し、失敗したらその exit code を返す。
 

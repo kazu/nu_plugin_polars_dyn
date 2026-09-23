@@ -119,8 +119,8 @@ The builder that produces a plugin binary with scan source crates compiled in. I
 its own rather than a plugin, and `cargo install` puts it next to the plugin.
 
 ```
-nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
-                    [--out <dir>] [--debug]
+nu-polars-dyn-build [OPTIONS] <crate>...
 ```
 
-How to use it, and how to write the crate, is in [custom_build.md](./custom_build.md).
+`nu-polars-dyn-build --help` lists the options. How to use it, and how to write the crate, is in
+[custom_build.md](./custom_build.md).
