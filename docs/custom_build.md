@@ -158,7 +158,7 @@ An ordinary lib crate that depends on `nu_plugin_polars_dyn` (its lib is named
 
 ```toml
 [dependencies]
-nu_plugin_polars_dyn = "0.2"
+nu_plugin_polars_dyn = "0.3"
 polars = "=0.55.2"
 ```
 

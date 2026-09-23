@@ -11,7 +11,7 @@ repository = "https://github.com/kazu/nu_plugin_polars_dyn"
 bench = false
 
 [dependencies]
-nu_plugin_polars_dyn = { version = "=0.2.0", path = ".." }
+nu_plugin_polars_dyn = { version = "=0.3.0", path = ".." }
 polars = { version = "=0.55.2", features = ["lazy"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
