@@ -108,7 +108,7 @@ task は agreements.md の順序で起票済みで、依存は各 task のコメ
 ## リリース
 
 clean な `main` で `make release version=MAJOR.MINOR.PATCH`。先に `make ci` が走り、緑なら
-toolkit.nu の `release` が `Cargo.toml` の version、`seekzstdsep-scan` の pin、
+toolkit.nu の `release` が `Cargo.toml` の version、`seekzstdsep-scan` / `ssh-scan` の pin、
 `docs/custom_build.md` の例を書き換え、`Cargo.lock` を更新して commit し、tag `<version>`
 (`v` 無し)を打って `gh` に `main` と tag を push する。branch は切らない。crates.io には publish しない。
 tag が要るのは `nu-polars-dyn-build` が自分の版の tag を `nu_plugin_polars_dyn` の git 依存に
