@@ -38,8 +38,8 @@ pub struct PolarsPlugin {
 }
 
 impl PolarsPlugin {
-    /// Builds the plugin with the scan sources `polars_dyn open` can use. Fails when two
-    /// sources share a name or a suffix.
+    /// Builds the plugin with the scan sources `polars_dyn open` can use beside the built-ins.
+    /// Fails when two sources share a name or a suffix.
     pub fn new(sources: &'static [&'static dyn ScanSource]) -> Result<Self, ShellError> {
         Ok(Self {
             cache: Cache::default(),
@@ -283,10 +283,9 @@ pub fn serve(extra: &[&'static [&'static dyn ScanSource]]) {
         std::env::set_var("POLARS_ALLOW_EXTENSION", "true");
     }
 
-    let sources: Vec<&'static dyn ScanSource> = scan::builtin::BUILTIN
+    let sources: Vec<&'static dyn ScanSource> = extra
         .iter()
-        .copied()
-        .chain(extra.iter().flat_map(|sources| sources.iter().copied()))
+        .flat_map(|sources| sources.iter().copied())
         .collect();
 
     match PolarsPlugin::new(Box::leak(sources.into_boxed_slice())) {
@@ -347,7 +346,7 @@ pub mod test {
     impl PolarsPlugin {
         /// Creates a new polars plugin in test mode
         pub fn new_test_mode() -> Result<Self, ShellError> {
-            PolarsPlugin::new(scan::builtin::BUILTIN)
+            PolarsPlugin::new(&[])
         }
     }
 

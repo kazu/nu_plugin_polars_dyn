@@ -8,6 +8,7 @@ use crate::{
     PolarsPlugin,
     command::core::resource::Resource,
     nu_serde::to_serde_value,
+    scan::Registered,
     values::{CustomValueSupport, NuLazyFrame, PolarsPluginType},
 };
 
@@ -113,7 +114,11 @@ fn command(
         None => Vec::new(),
     };
 
-    let lazy = scan_source.scan(&source, &opts).map_err(|e| {
+    let lazy = match scan_source {
+        Registered::Builtin(builtin) => (builtin.scan)(&source, &opts),
+        Registered::Source(scan_source) => scan_source.scan(&source, &opts),
+    }
+    .map_err(|e| {
         ShellError::Generic(GenericError::new(
             format!("{} scan error", scan_source.name()),
             e.to_string(),

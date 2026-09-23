@@ -66,7 +66,8 @@ fn main() {
 }
 ```
 
-`serve` は env_logger の初期化、`POLARS_ALLOW_EXTENSION` の設定、built-in との連結、
+`serve` は env_logger の初期化、`POLARS_ALLOW_EXTENSION` の設定、`extra` の平坦化(built-in は
+registry が常に持つ)、
 `PolarsPlugin::new`、`serve_plugin` をまとめた 1 本。published の `src/main.rs` も同じものを
 `&[]` で呼ぶので、生成バイナリと published バイナリの違いは引数だけになる。
 

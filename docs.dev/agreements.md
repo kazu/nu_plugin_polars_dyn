@@ -122,7 +122,7 @@ nu-polars-dyn-build <crate>... [--path <name>=<dir>]... [--git <name>=<url>]...
   publish 前と、この repo 自身の統合テストのための逃げ道。採らなかった案は利用者に path を
   渡させること(ビルダーが自分の出自を知っているのに聞く理由が無い)。
 - `bin` は `nu_plugin_polars::serve(extra)` を呼ぶだけ。`serve` は env_logger の初期化、
-  `POLARS_ALLOW_EXTENSION` の設定、`BUILTIN` と `extra` の連結、`PolarsPlugin::new` と
+  `POLARS_ALLOW_EXTENSION` の設定、`extra` の平坦化(built-in は registry が常に持つ)、`PolarsPlugin::new` と
   `serve_plugin` をまとめた 1 本で、published の `src/main.rs` も同じものを呼ぶ。
 
 ## `polars_dyn call`(expression plugin)
