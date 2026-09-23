@@ -24,13 +24,107 @@ well, next to the plugin in `~/.cargo/bin/`. **It is not published yet.**
 
 ## 2. Write the scan source crate
 
-The crate exposes exactly one entry point.
+A scan source crate is a Rust lib crate. It must provide two things, and nothing else is looked
+at:
+
+1. one or more types that implement the trait `nu_plugin_polars::scan::ScanSource`;
+2. one public function `scan_sources()` that returns those types.
+
+### 2.1 The trait `ScanSource`
+
+Defined in `src/scan/mod.rs` of `nu_plugin_polars_dyn`, reachable as
+`nu_plugin_polars::scan::ScanSource`.
+
+```rust
+pub trait ScanSource: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn suffixes(&self) -> &'static [&'static str];
+    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame>;
+}
+```
+
+The implementing type is a `'static` value, usually a unit struct; the plugin holds a
+`&'static dyn ScanSource` to it for the life of the process and calls it from any thread, hence
+`Send + Sync`.
+
+#### `name`
+
+- Returns the registered name. `polars_dyn open --format <name>` selects the source by it, and
+  the error for an unknown source lists it.
+- Requirements: unique across every source in the binary, including the built-ins `parquet`,
+  `csv`, `ipc` and `ndjson`. A duplicate makes the plugin exit at start with
+  `scan source name `<name>` is registered twice`.
+
+#### `suffixes`
+
+- Returns the suffixes by which the source is chosen when `--format` is absent: the end of the
+  source string is compared with every registered suffix and the longest match wins.
+- Requirements: each suffix starts with `.`, and no suffix is claimed by two sources in the binary
+  (`scan sources `<a>` and `<b>` both claim the suffix `<s>``). A source with an empty list can
+  only be selected with `--format`.
+
+#### `scan`
+
+- Called once per `polars_dyn open`, after the source was chosen. Builds the `LazyFrame` and
+  returns it. Nothing is read yet unless the source needs to (a schema, say); the rows are read
+  when the frame is collected.
+- `source`: the bytes to read, opened by the plugin. In this version it is the local file named
+  on the command line; a URL with a scheme is refused before `scan` is reached. The source does
+  not learn the path. See [2.2](#22-the-trait-readat) for what the handle offers.
+- `opts`: the `--opts` record encoded as JSON, or an empty slice when the flag was omitted. Its
+  contents are the source's own contract; the plugin does not look inside. `parse_opts` turns
+  it into a `serde_json::Map`, and `overlay_opts` lays it over a serde struct of defaults and
+  refuses unknown keys.
+- Requirements: return `Err` rather than panic for anything the input or the options can cause.
+  The error text is shown to the user as `<name> scan error`, pointing at the source argument.
+  Do not collect the frame.
+
+### 2.2 The trait `ReadAt`
+
+`nu_plugin_polars::scan::ReadAt`, the handle `scan` receives.
+
+```rust
+pub trait ReadAt: Send + Sync {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> io::Result<usize>;
+    fn len(&self) -> io::Result<u64>;
+}
+```
+
+- `read_at` reads from `offset` into `buf` and returns how many bytes were read. Fewer than
+  `buf.len()` can come back before the end, and `0` means `offset` is at or past the end. Every
+  call names its offset and takes `&self`, so one handle can be read from several threads at once
+  without a position to share.
+- `len` is the length in bytes.
+- Only random-access sources are handed out; a pipe or a socket never reaches a scan source.
+- A library that wants `Read + Seek` is given a cursor over the handle: a struct holding the
+  `Arc<dyn ReadAt>` and its own position, one per thread. `seekzstdsep-scan/src/seek_zst.rs`
+  has one (`ReadAtCursor`).
+
+### 2.3 The entry point `scan_sources`
 
 ```rust
 pub fn scan_sources() -> &'static [&'static dyn nu_plugin_polars::scan::ScanSource];
 ```
 
-`ScanSource` is the trait that turns one format into a `LazyFrame`. It has three methods.
+- Requirements: `pub`, at the crate root, exactly this signature. `nu-polars-dyn-build` writes a
+  `main.rs` that calls `<crate>::scan_sources()` for every crate it was given and hands the
+  concatenation to the plugin. A crate without it fails to compile the generated project
+  (`cannot find function scan_sources in crate ...`); nothing checks it earlier.
+- The slice and the sources it points to are `'static`: `&[&MyFormat]` with unit structs, or
+  `static` items.
+
+### 2.4 The manifest
+
+An ordinary lib crate that depends on `nu_plugin_polars_dyn` (its lib is named
+`nu_plugin_polars`) and on polars at the same version the plugin uses.
+
+```toml
+[dependencies]
+nu_plugin_polars_dyn = "0.2"
+polars = "=0.55.2"
+```
+
+### 2.5 Example
 
 ```rust
 use std::sync::Arc;
@@ -45,20 +139,14 @@ pub fn scan_sources() -> &'static [&'static dyn ScanSource] {
 struct MyFormat;
 
 impl ScanSource for MyFormat {
-    /// The name `--format` takes.
     fn name(&self) -> &'static str {
         "myformat"
     }
 
-    /// Without `--format`, the source is chosen by the longest match against the end of the
-    /// source string. Start each one with a `.`.
     fn suffixes(&self) -> &'static [&'static str] {
         &[".myfmt"]
     }
 
-    /// `source` is the file, opened by the plugin and read by offset (`read_at`, `len`); it is
-    /// `Send + Sync`, so frames can be read in parallel through the one handle. `opts` is the
-    /// `--opts` record as JSON bytes, empty when it was omitted. Do not collect.
     fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let opts = parse_opts(opts)?; // serde_json::Map
         todo!()
@@ -66,20 +154,8 @@ impl ScanSource for MyFormat {
 }
 ```
 
-`Cargo.toml` is an ordinary lib crate that depends on `nu_plugin_polars_dyn` (whose lib is named
-`nu_plugin_polars`).
-
-```toml
-[dependencies]
-nu_plugin_polars_dyn = "0.2"
-polars = "=0.55.2"
-```
-
-A minimal working implementation is `tests/rows_scan/src/lib.rs` in this repository; one that reads
-a real format is `logfmt-scan/src/lib.rs` in `polars-logfmt`.
-
-A crate that does not meet the convention shows up as a compile error in the generated code
-(`cannot find function scan_sources in crate ...`).
+A minimal working implementation is `tests/rows_scan/src/lib.rs` in this repository;
+`seekzstdsep-scan/src/source.rs` reads a real format.
 
 ## 3. Build
 
