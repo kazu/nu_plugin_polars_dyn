@@ -28,9 +28,9 @@ ci:
 	  [ -n "$(CI_MAX_FILE)" ] && printf '%d\n' "$$MAX" > "$(CI_MAX_FILE)"; \
 	  exit $$MAX
 
-# `make release version=0.2.0`: version を上げる commit を main に置き、tag を打って push する。
-# 手順は toolkit.nu の `release`。
+# `make release version=0.2.0`: ci を通してから、version を上げる commit を main に置き、tag を
+# 打って push する。手順は toolkit.nu の `release`。
 .PHONY: release
-release:
+release: ci
 	@test -n "$(version)" || { echo 'usage: make release version=MAJOR.MINOR.PATCH' >&2; exit 2; }
 	nu -c "use toolkit.nu; toolkit release $(version)"

@@ -39,7 +39,7 @@ export def check [] {
 
 # version を上げる commit を main に置き、tag を打って push する。`make release version=0.2.0` の中身。
 # clean な main の上で Cargo.toml と seekzstdsep-scan の pin と docs/custom_build.md の例を
-# 書き換え、Cargo.lock を更新し、check を通してから commit する。
+# 書き換え、Cargo.lock を更新して commit する。ゲートは Makefile 側が `ci` を先に走らせる。
 # tag は `v` 無しの `<version>`。nu-polars-dyn-build がその tag を git 依存に使うので push まで行う。
 export def release [
     version: string  # 例: 0.2.0
@@ -69,7 +69,6 @@ export def release [
     | str replace --regex '(?m)^nu_plugin_polars_dyn = "[^"]+"' $'nu_plugin_polars_dyn = "($minor)"'
     | save --force docs/custom_build.md
     ^cargo update --workspace --offline
-    check
     ^git add Cargo.toml Cargo.lock seekzstdsep-scan/Cargo.toml docs/custom_build.md
     ^git commit -m $"release: bump the version to ($version)"
     ^git tag $version
