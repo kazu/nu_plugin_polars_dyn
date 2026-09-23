@@ -119,8 +119,12 @@ tag がまだ無い版に対して使うための逃げ道で、`tests/custom_bu
 - `tests/custom_build.rs` — `tests/rows_scan`(`.rows` を 1 列の `line` に読む最小の source)を
   組み込み、built-in が残っていること、`--opts` が crate まで届くこと、規約を満たさない crate が
   コンパイルエラーで落ちることを見る。
-- `tests/open_seek_zst.rs` — `seekzstdsep-scan` を組み込み、`.seek.zst` が plain と同じ答えを
-  返すことを 17 のクエリで見る。バイナリはファイルにつき 1 本で、`OnceLock` で共有する。
+- `tests/open_seek_zst.rs` — `seekzstdsep-scan` を組み込み、`file`, `seek-zst`, `ndjson` / `csv` の
+  chain が plain と同じ答えを返すことをクエリの一覧で見る。バイナリはファイルにつき 1 本で、
+  `OnceLock` で共有する。
+- `tests/open_ssh.rs` — `ssh-scan` を組み込み、`ssh`, `ndjson` と `ssh`, `seek-zst`, `ndjson` を
+  環境変数 `POLARS_DYN_SSH_TARGET`(`user@host`)の sshd に対して見る。無ければ skip を print する
+  (CI には sshd が無い)。
 
 **1 つのテストファイルが呼ぶビルドは 1 本にまとめてある。**生成 project のビルドは cargo の
 入れ子呼び出しなので、同じファイルのテストが並行すると cargo が 2 つ走る。まとめれば直列になり、

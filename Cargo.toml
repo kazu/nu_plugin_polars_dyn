@@ -1,5 +1,5 @@
 [workspace]
-members = ["seekzstdsep-scan", "tests/expr_plugin", "tests/rows_scan"]
+members = ["seekzstdsep-scan", "ssh-scan", "tests/expr_plugin", "tests/rows_scan"]
 
 [package]
 authors = ["Kazuhisa TAKEI <kazuhisa@gmail.com>"]
