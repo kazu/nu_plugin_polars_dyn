@@ -19,7 +19,7 @@ nushell の [`nu_plugin_polars`][upstream] の fork です。パイプを流れ�
 - [インストール](#インストール)
 - [利用方法](#利用方法)
 - [カスタムスキャナの追加方法](#カスタムスキャナの追加方法)
-  - [同梱の `.seek.zst`](#同梱の-seekzst)
+  - [同梱の `.seek.zst` と `ssh://`](#同梱の-seekzst-と-ssh)
 - [ディレクトリ構成](#ディレクトリ構成)
 - [開発](#開発)
 - [ライセンス](#ライセンス)
@@ -27,15 +27,17 @@ nushell の [`nu_plugin_polars`][upstream] の fork です。パイプを流れ�
 ## 本家との違い
 
 - **[`polars_dyn open`](docs/cli.md#polars_dyn-open)** — フォーマットごとの分岐を scan source の
-  registry に置き換えました。フォーマットは `--format`、読み込みオプションは `--opts` の record
-  で渡します。
-- **カスタムスキャナ** — parquet / csv / ipc / ndjson 以外のフォーマットは、自分で書いた Rust の
-  crate で追加できます。[`nu-polars-dyn-build`](docs/cli.md#nu-polars-dyn-build) がそれを
-  組み込んだ**自分用の plugin バイナリ**を作ります。何本でも組み込めます。
+  **chain** に置き換えました。`ssh://host/log/events.jsonl.seek.zst` は `ssh` → `seek-zst` →
+  `ndjson` の 3 段で、scheme が開き、接尾辞が順に展開と読み込みを担います。どの段も前後を
+  知らないので、開き方・圧縮・フォーマットは何とでも組み合わさります。chain は `--format`、
+  各段のオプションは `--opts` の record で渡します。
+- **カスタムスキャナ** — scheme(`ssh://`)、圧縮(`.seek.zst`)、フォーマット(`.logfmt`)の
+  どれも、自分で書いた Rust の crate で追加できます。[`nu-polars-dyn-build`](docs/cli.md#nu-polars-dyn-build)
+  がそれを組み込んだ**自分用の plugin バイナリ**を作ります。何本でも組み込めます。
 - **[`polars_dyn call`](docs/cli.md#polars_dyn-call)** — polars の expression plugin(`.so`)が
   公開する関数を式として呼べます。
 - **[`polars_dyn collect --streaming`](docs/cli.md#polars_dyn-collect---streaming)** — polars の
-  streaming エンジンで collect できます。
+  streaming エンジンで collect できます(parquet / ipc)。
 - **接頭辞 `polars_dyn`** — 本家の `polars` plugin と同じ nushell に同時に登録できます。
 
 引き継いだコマンド(`filter` / `select` / `group-by` / `sort-by` など)は本家のままです。
@@ -64,9 +66,11 @@ plugin use polars_dyn
 
 ```nu
 polars_dyn open data.csv | polars_dyn collect
-polars_dyn open data.csv --opts {has_header: false} | polars_dyn collect
+polars_dyn open data.csv --opts {csv: {has_header: false}} | polars_dyn collect
 polars_dyn open data.txt --format csv | polars_dyn collect
 polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | polars_dyn collect --streaming
+polars_dyn open events.jsonl.seek.zst | polars_dyn collect                              # seekzstdsep_scan を組み込んだバイナリ
+polars_dyn open ssh://host/var/log/events.jsonl.seek.zst | polars_dyn first 10 | polars_dyn collect   # ssh_scan も
 [[a]; [1] [2]] | polars_dyn into-df | polars_dyn select (polars_dyn call ./libmy_plugin.so add a --kwargs {n: 10} --elementwise) | polars_dyn collect
 ```
 
@@ -77,8 +81,9 @@ polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | pola
 
 ## カスタムスキャナの追加方法
 
-`polars_dyn open` が読み込めるフォーマットは自分で追加できます。scan source は関数を 1 つ公開
-する lib crate で、cargo project も `main.rs` も `nu-polars-dyn-build` が書きます。
+`polars_dyn open` の chain の段 — 開く(scheme)、包む(圧縮など)、読む(フォーマット)— は
+自分で追加できます。scan source は関数を 1 つ公開する lib crate で、cargo project も `main.rs` も
+`nu-polars-dyn-build` が書きます。
 
 ```rust
 pub fn scan_sources() -> &'static [&'static dyn nu_plugin_polars::scan::ScanSource];
@@ -92,36 +97,42 @@ plugin add ./nu_plugin_polars_dyn
 crate は何本でも並べられるので、複数のカスタムスキャナを 1 つのバイナリに組み込めます:
 
 ```nu
-nu-polars-dyn-build seekzstdsep_scan my_scan_source --path seekzstdsep_scan=./seekzstdsep-scan --path my_scan_source=../my_scan_source
+nu-polars-dyn-build seekzstdsep_scan ssh_scan my_scan_source --path seekzstdsep_scan=./seekzstdsep-scan --path ssh_scan=./ssh-scan --path my_scan_source=../my_scan_source
 ```
 
 出来たバイナリは標準のものを置き換え、built-in のフォーマットもそのまま使えます。crate の
 書き方、ビルダーのオプション、`AnonymousScan` で踏む制約(`--streaming` で collect できない、
 offset 付きの `slice` が読み込みに効かない)は [docs/custom_build.md](docs/custom_build.md)。
 
-### 同梱の `.seek.zst`
+### 同梱の `.seek.zst` と `ssh://`
 
-[`seekzstdsep-scan/`](./seekzstdsep-scan/) はそのまま組み込める scan source です。
-[seekzstdsep][] が書く seekable zstd のファイル(`.csv.seek.zst` / `.ndjson.seek.zst` /
-`.jsonl.seek.zst`)を読みます。
+[`seekzstdsep-scan/`](./seekzstdsep-scan/) と [`ssh-scan/`](./ssh-scan/) はそのまま組み込める
+scan source です。前者は [seekzstdsep][] が書く seekable zstd のファイル(`.seek.zst`)を展開後の
+バイト列として次の段に渡し、後者は `ssh://[user@]host/path` を sftp で開きます。どちらも
+built-in の csv / ndjson / parquet / ipc と、他の crate のフォーマットの前に付きます。
 
 ```nu
 seekzstdsep compress events.jsonl   # -> events.jsonl.seek.zst
-nu-polars-dyn-build seekzstdsep_scan --path seekzstdsep_scan=./seekzstdsep-scan
+nu-polars-dyn-build seekzstdsep_scan ssh_scan --path seekzstdsep_scan=./seekzstdsep-scan --path ssh_scan=./ssh-scan
+polars_dyn open events.jsonl.seek.zst | polars_dyn collect
+polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 2222}} | polars_dyn collect
 ```
 
-追記され続けるテキストログを、ログのまま置いたまま polars で読むためにあります。ディスクは
-圧縮率のぶん減り、読む速度は素のファイルとおおむね同等です。分析だけが目的のファイルなら
-parquet の方が全軸で有利です。`--opts` の制約は crate の module ドキュメント
-([`seekzstdsep-scan/src/`](./seekzstdsep-scan/src/))にあります。
+`.seek.zst` は、追記され続けるテキストログをログのまま置いたまま polars で読むためにあります。
+ディスクは圧縮率のぶん減り、読む速度は素のファイルとおおむね同等です。分析だけが目的の
+ファイルなら parquet の方が全軸で有利です。`ssh` の `--opts` は `{port, identity}` で、
+`identity` が無ければ ssh-agent で認証します。
+
+logfmt のログは [polars-logfmt][] の `logfmt-scan` が `.logfmt` の段になります(別 repo。
+`--path logfmt_scan=<polars-logfmt の checkout>/logfmt-scan` で組み込む)。
 
 ## ディレクトリ構成
 
 - [`src/`](./src/) — plugin 本体。[`src/scan/`](./src/scan/) が registry と `polars_dyn open`、
   [`src/call.rs`](./src/call.rs) が `polars_dyn call`、
   [`src/bin/nu-polars-dyn-build.rs`](./src/bin/nu-polars-dyn-build.rs) がビルダー。
-- [`seekzstdsep-scan/`](./seekzstdsep-scan/) — `.seek.zst` の scan source。plugin 本体には
-  入りません。
+- [`seekzstdsep-scan/`](./seekzstdsep-scan/) — `.seek.zst` の scan source、
+  [`ssh-scan/`](./ssh-scan/) — `ssh://` の scan source。plugin 本体には入りません。
 - [`tests/`](./tests/) — `nu` を spawn する統合テスト。
   [`tests/expr_plugin`](./tests/expr_plugin/) は `polars_dyn call` 用の expression plugin、
   [`tests/rows_scan`](./tests/rows_scan/) はビルダー用の最小の scan source。
@@ -147,3 +158,4 @@ MIT ([LICENSE](./LICENSE))。
 
 [upstream]: https://github.com/nushell/nushell/tree/main/crates/nu_plugin_polars
 [seekzstdsep]: https://github.com/kazu/seekzstdsep
+[polars-logfmt]: https://github.com/kazu/polars-logfmt

@@ -85,7 +85,7 @@ fn builds_a_plugin_with_a_scan_source_compiled_in() {
         "[[line]; [a], [b], [c]]"
     );
     assert_eq!(
-        collect_as_nuon(&plugin, &rows, "--opts {skip: 1}").trim(),
+        collect_as_nuon(&plugin, &rows, "--opts {rows: {skip: 1}}").trim(),
         "[[line]; [b], [c]]"
     );
 
@@ -102,8 +102,8 @@ fn builds_a_plugin_with_a_scan_source_compiled_in() {
     a_crate_without_the_entry_point_fails_to_compile(out.path());
 }
 
-/// A compiled-in source is handed an opened file, and only a local path opens; a built-in gets
-/// the URL itself. Part of the test above to reuse the binary it built.
+/// A compiled-in source is handed bytes that the head of the chain opened, and this binary has no
+/// source that opens `ssh://`. Part of the test above to reuse the binary it built.
 fn a_url_does_not_reach_a_compiled_in_source(plugin: &Path) {
     let output = Command::new("nu")
         .args([
@@ -118,7 +118,8 @@ fn a_url_does_not_reach_a_compiled_in_source(plugin: &Path) {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success(), "a URL was opened:\n{stderr}");
     assert!(
-        stderr.contains("only a local file can be read by this scan source"),
+        stderr.contains("No scan source for scheme `ssh`")
+            && stderr.contains("registered schemes: file"),
         "stderr:\n{stderr}"
     );
 }

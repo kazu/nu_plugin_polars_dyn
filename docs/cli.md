@@ -13,47 +13,76 @@ explains one.
 ## `polars_dyn open`
 
 ```
-polars_dyn open <source> [--format (-f) <name>] [--opts (-o) <record>]  → LazyFrame
+polars_dyn open <source> [--format (-f) <a,b,c>] [--opts (-o) <record>]  → LazyFrame
 ```
 
-`source` is a local path or a URL such as `s3://...`. A built-in format hands it to polars as it
-stands; any other scan source is given the opened file, so for those only a local path works in
-this build. Nothing is collected, so what comes back is a `LazyFrame` that has not read anything
-yet.
+`source` names a **chain** of scan sources: the URL scheme picks the first, which opens the bytes,
+and every suffix at the end of the string picks one more, which either turns the bytes into other
+bytes or reads them into a frame. `ssh://host/log/events.jsonl.seek.zst` is `ssh`, `seek-zst`,
+`ndjson`: sftp opens the file, `seek-zst` decompresses it, `ndjson` reads the lines. A path without
+a scheme is opened by `file`. No source in the chain knows what comes before or after it, so any
+opener works with any decompressor and any format.
+
+Nothing is collected, so what comes back is a `LazyFrame` that has not read the rows yet.
+
+### The chain
+
+1. `<scheme>://` picks the source that registered that scheme; without a scheme it is `file`. A
+   scheme nobody registered is an error listing the registered schemes.
+2. The **longest** registered suffix ending the string is stripped and its source appended; this
+   repeats until no suffix matches (`x.jsonl.seek.zst` strips `.seek.zst`, then `.jsonl`). If
+   nothing was stripped, the error lists the sources a suffix can pick.
+3. The first source opens the URL, every one in between wraps the bytes, the last reads them into
+   the frame. A last source that only wraps (`./x.seek.zst` alone) is an error naming it.
 
 ### `--format`
 
-Picks the format by its registered name. Without it, the format is the **longest match** between
-the end of `source` and the registered suffixes (`app.logfmt.seek.zst` goes to the
-`.logfmt.seek.zst` source, not to `.seek.zst`). If nothing matches, the error lists the registered
-names.
+Replaces step 2 with the names given, comma-separated and in chain order; the scheme still comes
+from the string. `--format csv` reads a `.txt` as csv, `--format seek-zst,ndjson` reads a file
+whose name says nothing. A name nobody registered is an error listing the registered names.
 
-The built-ins are the four polars reads itself:
+The sources every binary has:
 
-| name | suffixes | top level of `--opts` |
+| name | picked by | `--opts` under its name |
 |---|---|---|
-| `parquet` | `.parquet` / `.parq` / `.pq` | `ParquetOptions` |
+| `file` | no scheme, or `file://` | none |
+| `parquet` | `.parquet` / `.parq` / `.pq` | `ParquetOptions`, plus `scan` |
 | `csv` | `.csv` | `CsvReadOptions` |
-| `ipc` | `.arrow` / `.ipc` | `IpcScanOptions` |
+| `ipc` | `.arrow` / `.ipc` | `IpcScanOptions`, plus `scan` |
 | `ndjson` | `.ndjson` / `.jsonl` | `NDJsonReadOptions` |
+
+Anything else — `seek-zst`, `ssh`, `logfmt` — is a crate compiled in with
+[`nu-polars-dyn-build`](./custom_build.md).
 
 ### `--opts`
 
-The format's own options, as a record. What it holds is up to each scan source; the plugin turns it
-into JSON and passes it on without looking inside. Omitting it passes nothing.
-
-For the built-ins the top level is the struct in the table above, and the `scan` key is polars'
-`UnifiedScanArgs` (`glob`, `cloud_options`, `hive_options`, `row_index`, `pre_slice` and so on).
-Both are polars' own serde forms, so a `u8` such as the csv separator is written as a number rather
-than a character.
+A record keyed by scan source name, each value the record that source takes. The plugin turns each
+value into JSON and passes it to its source without looking inside; a key naming no source in the
+chain is an error, and a source that was given nothing gets an empty record.
 
 ```nu
-polars_dyn open data.csv --opts {has_header: false}
-polars_dyn open data.csv --opts {parse_options: {separator: 59}, scan: {glob: false}}
-polars_dyn open data.ndjson --opts {infer_schema_length: 1000}
+polars_dyn open data.csv --opts {csv: {has_header: false}}
+polars_dyn open data.csv --opts {csv: {parse_options: {separator: 59}}}
+polars_dyn open data.ndjson --opts {ndjson: {infer_schema_length: 1000}}
+polars_dyn open data.parquet --opts {parquet: {scan: {row_index: {name: i, offset: 0}}}}
+polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 2222}, ndjson: {ignore_errors: true}}
 ```
 
-A misspelled key is an error: polars' serde rejects fields it does not know.
+For the built-in formats the value is polars' own option struct in its serde form, so a `u8` such
+as the csv separator is a number rather than a character, and a misspelled key is an error.
+
+parquet and ipc are read by polars' own scan over the bytes, so their `scan` key is polars'
+`UnifiedScanArgs` (`row_index`, `pre_slice`, `cloud_options` and so on) as before.
+
+csv and ndjson are read by the plugin: the bytes are cut into chunks of `chunk_size` bytes, each cut
+moved forward to the next newline, and the chunks are parsed in parallel with polars' reader and
+concatenated. The schema is settled on the first chunk, and `infer_schema_length` looks no further
+than it. The cut does not know csv quoting: a newline inside a quoted field can be a cut, which is
+a parse error, so a csv with such fields is read with a `chunk_size` of at least its length. Every chunk is read by a reader holding the same options, so the csv options whose subject
+is the whole file are refused rather than applied once per chunk: `n_rows`, `skip_rows`,
+`skip_lines`, `skip_rows_after_header` (use `polars_dyn slice`), `columns`, `projection`
+(`polars_dyn select`), `column_names_overwrite` (`polars_dyn rename`) and `row_index`, which has
+no equivalent. The `scan` key is not taken by these two.
 
 ## `polars_dyn collect --streaming`
 
@@ -65,10 +94,9 @@ stay in-memory either way.
 polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | polars_dyn collect --streaming
 ```
 
-A scan source of your own (usually an `AnonymousScan`) cannot be collected on the streaming engine.
-It fails with `collecting on the streaming engine: not yet implemented: unimplemented:
-AnonymousScan` rather than quietly falling back to in-memory. The four built-in formats are not
-affected.
+Only parquet and ipc can be collected there: they are polars' own scan. csv, ndjson and every scan
+source of your own are an `AnonymousScan`, which fails with `collecting on the streaming engine: not
+yet implemented: unimplemented: AnonymousScan` rather than quietly falling back to in-memory.
 
 ## `polars_dyn call`
 

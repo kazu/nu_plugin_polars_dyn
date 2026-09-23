@@ -1,20 +1,21 @@
-use std::{fs::File, sync::Arc};
+use std::collections::HashMap;
 
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
 use nu_protocol::{
     Category, DataSource, Example, LabeledError, PipelineData, PipelineMetadata, ShellError,
     Signature, Span, Spanned, SyntaxShape, Type, Value, shell_error::generic::GenericError,
 };
+use polars::prelude::{LazyFrame, PolarsError};
 
 use crate::{
     PolarsPlugin,
     command::core::resource::Resource,
     nu_serde::to_serde_value,
-    scan::{ReadAt, Registered},
+    scan::{Chain, ScanSource, url_scheme},
     values::{CustomValueSupport, NuLazyFrame, PolarsPluginType},
 };
 
-/// `polars_dyn open <source> [--format <name>] [--opts <record>]` → LazyFrame.
+/// `polars_dyn open <source> [--format <a,b,c>] [--opts <record>]` → LazyFrame.
 ///
 /// The output carries the source string as `DataSource::FilePath`, which `polars_dyn save`
 /// checks to refuse writing into the file a frame is still being read from.
@@ -29,7 +30,7 @@ impl PluginCommand for Open {
     }
 
     fn description(&self) -> &str {
-        "Opens a source as a lazy dataframe through one of the registered scan sources."
+        "Opens a source as a lazy dataframe through a chain of the registered scan sources."
     }
 
     fn signature(&self) -> Signature {
@@ -37,18 +38,18 @@ impl PluginCommand for Open {
             .required(
                 "source",
                 SyntaxShape::String,
-                "File path, or a cloud URL for a built-in format.",
+                "File path, or a URL whose scheme a registered scan source opens.",
             )
             .named(
                 "format",
                 SyntaxShape::String,
-                "Registered scan source name. If omitted, derive from the suffix of the source.",
+                "Registered scan source names, comma-separated, in place of the suffixes of the source.",
                 Some('f'),
             )
             .named(
                 "opts",
                 SyntaxShape::Record(Vec::new().into()),
-                "Options for the scan source, passed through as JSON.",
+                "Options per scan source, keyed by its name, each passed through as JSON.",
                 Some('o'),
             )
             .input_output_type(Type::Any, PolarsPluginType::NuLazyFrame.into())
@@ -64,12 +65,17 @@ impl PluginCommand for Open {
             },
             Example {
                 description: "Open a csv file without a header row",
-                example: "polars_dyn open data.csv --opts {has_header: false}",
+                example: "polars_dyn open data.csv --opts {csv: {has_header: false}}",
                 result: None,
             },
             Example {
                 description: "Open a file whose suffix does not tell the format",
                 example: "polars_dyn open data.txt --format csv",
+                result: None,
+            },
+            Example {
+                description: "Name the chain when the suffixes do not: a seekable zstd of ndjson",
+                example: "polars_dyn open dump.bin --format seek-zst,ndjson",
                 result: None,
             },
         ]
@@ -93,108 +99,107 @@ fn command(
 ) -> Result<PipelineData, ShellError> {
     let spanned_source: Spanned<String> = call.req(0)?;
     let format: Option<Spanned<String>> = call.get_flag("format")?;
-    let opts: Option<Value> = call.get_flag("opts")?;
+    let opts: Option<Spanned<Value>> = call.get_flag("opts")?;
 
     let source = resolve_source(plugin, engine, &spanned_source)?;
-    let scan_source = match &format {
-        Some(name) => plugin
-            .scan_registry
-            .find_by_name(&name.item)
-            .ok_or_else(|| no_source_error(plugin, &name.item, name.span))?,
-        None => plugin
-            .scan_registry
-            .find_by_suffix(&source)
-            .ok_or_else(|| no_source_error(plugin, &source, spanned_source.span))?,
-    };
-    let opts = match opts {
-        Some(record) => serde_json::to_vec(&to_json(&record)?).map_err(|e| {
-            ShellError::Generic(GenericError::new_internal(
-                format!("Could not encode --opts as JSON: {e}"),
-                "",
-            ))
-        })?,
-        None => Vec::new(),
-    };
+    let chain = plugin.scan_registry.resolve(
+        &source,
+        format.as_ref().map(|f| f.item.as_str()),
+        format.as_ref().map_or(spanned_source.span, |f| f.span),
+    )?;
+    let opts = split_opts(opts.as_ref(), &chain)?;
 
-    let lazy = match scan_source {
-        Registered::Builtin(builtin) => (builtin.scan)(&source, &opts),
-        Registered::Source(scan_source) => {
-            scan_source.scan(open_read_at(&source, spanned_source.span)?, &opts)
-        }
-    }
-    .map_err(|e| {
-        ShellError::Generic(GenericError::new(
-            format!("{} scan error", scan_source.name()),
-            e.to_string(),
-            spanned_source.span,
-        ))
-    })?;
+    let lazy = run_chain(&chain, &source, &opts, spanned_source.span)?;
     let value = NuLazyFrame::from(lazy).cache_and_to_value(plugin, engine, call.head)?;
     let metadata = PipelineMetadata::default()
         .with_data_source(DataSource::FilePath(spanned_source.item.into()));
     Ok(PipelineData::value(value, Some(metadata)))
 }
 
-/// The source string a built-in receives, and the one a [`ScanSource`](super::ScanSource) is
-/// opened from. A URL with any scheme (`s3://`, `ssh://`, ...) is passed through untouched;
-/// everything else is a local path made absolute against the engine's current directory. The
-/// scheme is checked here rather than by `Resource`, whose `PlRefPath::has_scheme` knows only the
-/// cloud schemes polars reads itself.
+/// Opens with the head, wraps with the middle and scans with the last of `chain`, each given
+/// its own entry of `opts`. An error names the source that raised it.
+fn run_chain(
+    chain: &Chain,
+    source: &str,
+    opts: &HashMap<&str, Vec<u8>>,
+    span: Span,
+) -> Result<LazyFrame, ShellError> {
+    let opts_of = |scan: &dyn ScanSource| opts.get(scan.name()).map_or(&[][..], Vec::as_slice);
+    let scan_error = |scan: &dyn ScanSource, e: PolarsError| {
+        ShellError::Generic(GenericError::new(
+            format!("{} scan error", scan.name()),
+            e.to_string(),
+            span,
+        ))
+    };
+
+    let mut bytes = chain
+        .head
+        .open(source, opts_of(chain.head))
+        .map_err(|e| scan_error(chain.head, e))?;
+    for scan in &chain.middle {
+        bytes = scan
+            .wrap(bytes, opts_of(*scan))
+            .map_err(|e| scan_error(*scan, e))?;
+    }
+    chain
+        .last
+        .scan(bytes, opts_of(chain.last))
+        .map_err(|e| scan_error(chain.last, e))
+}
+
+/// The string the head of the chain opens. A URL with any scheme (`ssh://`, `file://`, ...) is
+/// passed through untouched; everything else is a local path made absolute against the engine's
+/// current directory. The scheme is checked here rather than by `Resource`, whose
+/// `PlRefPath::has_scheme` knows only the cloud schemes polars reads itself.
 fn resolve_source(
     plugin: &PolarsPlugin,
     engine: &EngineInterface,
     spanned_source: &Spanned<String>,
 ) -> Result<String, ShellError> {
-    if has_url_scheme(&spanned_source.item) {
+    if url_scheme(&spanned_source.item).is_some() {
         return Ok(spanned_source.item.clone());
     }
     Ok(Resource::new(plugin, engine, spanned_source)?.as_string())
 }
 
-/// The handle a [`ScanSource`](super::ScanSource) reads `source` through. This build opens local
-/// files only; a URL is an error naming its scheme.
-fn open_read_at(source: &str, span: Span) -> Result<Arc<dyn ReadAt>, ShellError> {
-    if has_url_scheme(source) {
-        return Err(ShellError::Generic(GenericError::new(
-            format!("Cannot open `{source}`"),
-            "only a local file can be read by this scan source",
-            span,
-        )));
-    }
-    let file = File::open(source).map_err(|e| {
-        ShellError::Generic(GenericError::new(
-            format!("Cannot open `{source}`"),
-            e.to_string(),
-            span,
-        ))
-    })?;
-    Ok(Arc::new(file))
-}
-
-/// `<scheme>://` per RFC 3986: a letter, then letters, digits, `+`, `-` or `.`.
-fn has_url_scheme(source: &str) -> bool {
-    let Some((scheme, _)) = source.split_once("://") else {
-        return false;
+/// Cuts the `--opts` record into one JSON blob per scan source of `chain`, keyed by name. A key
+/// that names no source of the chain is an error, as is a value that is not a record. Supports
+/// bool, int, float, string, nothing, list and record inside; anything else is a type error.
+fn split_opts<'a>(
+    opts: Option<&'a Spanned<Value>>,
+    chain: &Chain,
+) -> Result<HashMap<&'a str, Vec<u8>>, ShellError> {
+    let mut split = HashMap::new();
+    let Some(opts) = opts else {
+        return Ok(split);
     };
-    let mut chars = scheme.chars();
-    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
-        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
-}
-
-fn no_source_error(plugin: &PolarsPlugin, what: &str, span: Span) -> ShellError {
-    let names = plugin.scan_registry.names().collect::<Vec<_>>().join(", ");
-    ShellError::Generic(
-        GenericError::new(
-            format!("No scan source for `{what}`"),
-            format!("registered: {names}"),
-            span,
-        )
-        .with_help("Pass --format with one of the registered names"),
-    )
-}
-
-/// Encodes a `--opts` record as JSON. Supports bool, int, float, string, nothing, list and
-/// record; anything else is a type error.
-fn to_json(value: &Value) -> Result<serde_json::Value, ShellError> {
-    to_serde_value(value, "--opts")
+    let record = opts.item.as_record()?;
+    for (name, value) in record.iter() {
+        if !chain.names().any(|n| n == name) {
+            return Err(ShellError::Generic(GenericError::new(
+                format!("unknown scan `{name}` in --opts"),
+                format!(
+                    "the chain is: {}",
+                    chain.names().collect::<Vec<_>>().join(", ")
+                ),
+                opts.span,
+            )));
+        }
+        if !matches!(value, Value::Record { .. }) {
+            return Err(ShellError::Generic(GenericError::new(
+                format!("--opts `{name}` must be a record"),
+                format!("got {}", value.get_type()),
+                value.span(),
+            )));
+        }
+        let json = serde_json::to_vec(&to_serde_value(value, "--opts")?).map_err(|e| {
+            ShellError::Generic(GenericError::new_internal(
+                format!("Could not encode --opts as JSON: {e}"),
+                "",
+            ))
+        })?;
+        split.insert(name.as_str(), json);
+    }
+    Ok(split)
 }

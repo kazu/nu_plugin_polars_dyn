@@ -23,6 +23,26 @@ pub fn parse_opts(opts: &[u8]) -> PolarsResult<Map<String, Value>> {
     }
 }
 
+/// Refuses any option, for a source that takes none: the `--opts` bytes must be empty or an
+/// empty object.
+///
+/// ```
+/// # fn main() -> polars::prelude::PolarsResult<()> {
+/// use nu_plugin_polars::scan::no_opts;
+/// no_opts("file", b"")?;
+/// no_opts("file", b"{}")?;
+/// assert!(no_opts("file", br#"{"x": 1}"#).is_err());
+/// # Ok(())
+/// # }
+/// ```
+pub fn no_opts(name: &str, opts: &[u8]) -> PolarsResult<()> {
+    let opts = parse_opts(opts)?;
+    if let Some(key) = opts.keys().next() {
+        polars_bail!(ComputeError: "`{name}` takes no options, got `{key}`");
+    }
+    Ok(())
+}
+
 /// Deserializes `T` from `defaults` with `opts` overlaid on top.
 ///
 /// `opts` is merged into the JSON form of `defaults` object by object, so a record only needs
