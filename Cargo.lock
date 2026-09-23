@@ -3739,6 +3739,7 @@ version = "0.1.2"
 dependencies = [
  "chrono",
  "chrono-tz",
+ "clap",
  "env_logger",
  "fancy-regex",
  "hashbrown 0.17.1",
