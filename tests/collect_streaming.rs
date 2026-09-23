@@ -31,22 +31,13 @@ fn nu(script: &str, verbose: bool) -> Output {
         .expect("`nu` must be on PATH to run the integration tests")
 }
 
-fn run_nu(script: &str, verbose: bool) -> (String, String) {
-    let output = nu(script, verbose);
-    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
-    assert!(
-        output.status.success(),
-        "nu failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    );
-    (stdout, stderr)
-}
-
-/// Writes a csv the filter keeps two rows of, then collects the same query on the given engine.
-fn filtered_csv(flag: &str, verbose: bool) -> (String, String) {
+/// Writes a file the filter keeps two rows of, then collects the same query on the given engine.
+/// parquet is polars' own scan over the bytes, which the streaming engine runs; csv and ndjson
+/// are the plugin's chunked scan, an `AnonymousScan`, which it does not.
+fn filtered(file_name: &str, flag: &str, verbose: bool) -> Output {
     let dir = tempfile::tempdir().expect("tempdir");
-    let path = dir.path().join("x.csv").display().to_string();
-    run_nu(
+    let path = dir.path().join(file_name).display().to_string();
+    nu(
         &format!(
             "[[a b]; [1 2] [3 4] [5 6]] | polars_dyn into-df | polars_dyn save {path}; \
              polars_dyn open {path} | polars_dyn filter ((polars_dyn col a) > 1) \
@@ -56,10 +47,21 @@ fn filtered_csv(flag: &str, verbose: bool) -> (String, String) {
     )
 }
 
+fn filtered_parquet(flag: &str, verbose: bool) -> (String, String) {
+    let output = filtered("x.parquet", flag, verbose);
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+        output.status.success(),
+        "nu failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    (stdout, stderr)
+}
+
 #[test]
 fn streaming_returns_the_same_frame_as_in_memory() {
-    let (streaming, _) = filtered_csv("--streaming", false);
-    let (in_memory, _) = filtered_csv("", false);
+    let (streaming, _) = filtered_parquet("--streaming", false);
+    let (in_memory, _) = filtered_parquet("", false);
     assert_eq!(streaming.trim(), "[[a, b]; [3, 4]]");
     assert_eq!(streaming, in_memory);
 }
@@ -70,14 +72,14 @@ fn streaming_returns_the_same_frame_as_in_memory() {
 /// logs `running streaming-slice in subgraph`.
 #[test]
 fn streaming_flag_selects_the_streaming_engine() {
-    let (_, streaming) = filtered_csv("--streaming", true);
+    let (_, streaming) = filtered_parquet("--streaming", true);
     assert!(
         streaming.contains("polars-stream: running streaming-slice in subgraph"),
         "stderr:\n{streaming}"
     );
     assert!(!streaming.contains("run sink_mem"), "stderr:\n{streaming}");
 
-    let (_, in_memory) = filtered_csv("", true);
+    let (_, in_memory) = filtered_parquet("", true);
     assert!(in_memory.contains("run sink_mem"), "stderr:\n{in_memory}");
     assert!(
         !in_memory.contains("running streaming-slice"),
@@ -139,4 +141,16 @@ fn anonymous_scan_is_an_error_on_the_streaming_engine() {
         err.msg,
         "collecting on the streaming engine: not yet implemented: unimplemented: AnonymousScan"
     );
+}
+
+/// The built-in csv and ndjson are the plugin's chunked scan, an `AnonymousScan`, so they fail on
+/// the streaming engine the way a compiled-in source does.
+#[test]
+fn csv_and_ndjson_cannot_collect_on_the_streaming_engine() {
+    for file_name in ["x.csv", "x.ndjson"] {
+        let output = filtered(file_name, "--streaming", false);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(!output.status.success(), "{file_name} collected:\n{stderr}");
+        assert!(stderr.contains("AnonymousScan"), "{file_name}:\n{stderr}");
+    }
 }

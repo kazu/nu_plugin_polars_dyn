@@ -3757,6 +3757,7 @@ dependencies = [
  "planus",
  "polars",
  "polars-arrow",
+ "polars-buffer",
  "polars-compute",
  "polars-core",
  "polars-io",
@@ -5854,13 +5855,7 @@ version = "0.1.0"
 dependencies = [
  "nu_plugin_polars_dyn",
  "polars",
- "polars-core",
- "polars-io",
- "polars-plan",
- "rayon",
- "seekzstdsep",
- "serde",
- "serde_json",
+ "zeekstd",
 ]
 
 [[package]]
