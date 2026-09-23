@@ -1,3 +1,5 @@
+use std::{fs::File, sync::Arc};
+
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
 use nu_protocol::{
     Category, DataSource, Example, LabeledError, PipelineData, PipelineMetadata, ShellError,
@@ -8,7 +10,7 @@ use crate::{
     PolarsPlugin,
     command::core::resource::Resource,
     nu_serde::to_serde_value,
-    scan::Registered,
+    scan::{ReadAt, Registered},
     values::{CustomValueSupport, NuLazyFrame, PolarsPluginType},
 };
 
@@ -35,7 +37,7 @@ impl PluginCommand for Open {
             .required(
                 "source",
                 SyntaxShape::String,
-                "File path, cloud URL, or whatever the scan source reads.",
+                "File path, or a cloud URL for a built-in format.",
             )
             .named(
                 "format",
@@ -116,7 +118,9 @@ fn command(
 
     let lazy = match scan_source {
         Registered::Builtin(builtin) => (builtin.scan)(&source, &opts),
-        Registered::Source(scan_source) => scan_source.scan(&source, &opts),
+        Registered::Source(scan_source) => {
+            scan_source.scan(open_read_at(&source, spanned_source.span)?, &opts)
+        }
     }
     .map_err(|e| {
         ShellError::Generic(GenericError::new(
@@ -131,10 +135,11 @@ fn command(
     Ok(PipelineData::value(value, Some(metadata)))
 }
 
-/// The source string a [`ScanSource`](super::ScanSource) receives. A URL with any scheme
-/// (`s3://`, `ssh://`, ...) is passed through untouched; everything else is a local path made
-/// absolute against the engine's current directory. The scheme is checked here rather than by
-/// `Resource`, whose `PlRefPath::has_scheme` knows only the cloud schemes polars reads itself.
+/// The source string a built-in receives, and the one a [`ScanSource`](super::ScanSource) is
+/// opened from. A URL with any scheme (`s3://`, `ssh://`, ...) is passed through untouched;
+/// everything else is a local path made absolute against the engine's current directory. The
+/// scheme is checked here rather than by `Resource`, whose `PlRefPath::has_scheme` knows only the
+/// cloud schemes polars reads itself.
 fn resolve_source(
     plugin: &PolarsPlugin,
     engine: &EngineInterface,
@@ -144,6 +149,26 @@ fn resolve_source(
         return Ok(spanned_source.item.clone());
     }
     Ok(Resource::new(plugin, engine, spanned_source)?.as_string())
+}
+
+/// The handle a [`ScanSource`](super::ScanSource) reads `source` through. This build opens local
+/// files only; a URL is an error naming its scheme.
+fn open_read_at(source: &str, span: Span) -> Result<Arc<dyn ReadAt>, ShellError> {
+    if has_url_scheme(source) {
+        return Err(ShellError::Generic(GenericError::new(
+            format!("Cannot open `{source}`"),
+            "only a local file can be read by this scan source",
+            span,
+        )));
+    }
+    let file = File::open(source).map_err(|e| {
+        ShellError::Generic(GenericError::new(
+            format!("Cannot open `{source}`"),
+            e.to_string(),
+            span,
+        ))
+    })?;
+    Ok(Arc::new(file))
 }
 
 /// `<scheme>://` per RFC 3986: a letter, then letters, digits, `+`, `-` or `.`.

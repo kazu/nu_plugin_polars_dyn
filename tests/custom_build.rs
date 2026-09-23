@@ -94,8 +94,30 @@ fn builds_a_plugin_with_a_scan_source_compiled_in() {
         "the built-in sources are still registered"
     );
 
+    a_url_does_not_reach_a_compiled_in_source(&plugin);
     a_crate_taking_the_plugin_from_crates_io_builds(out.path());
     a_crate_without_the_entry_point_fails_to_compile(out.path());
+}
+
+/// A compiled-in source is handed an opened file, and only a local path opens; a built-in gets
+/// the URL itself. Part of the test above to reuse the binary it built.
+fn a_url_does_not_reach_a_compiled_in_source(plugin: &Path) {
+    let output = Command::new("nu")
+        .args([
+            "--no-config-file",
+            "--plugins",
+            &format!("[{}]", plugin.display()),
+            "-c",
+            "polars_dyn open ssh://u@h/data.rows",
+        ])
+        .output()
+        .expect("`nu` must be on PATH to run the integration tests");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "a URL was opened:\n{stderr}");
+    assert!(
+        stderr.contains("only a local file can be read by this scan source"),
+        "stderr:\n{stderr}"
+    );
 }
 
 /// Part of the test above for the same reason as the one below.

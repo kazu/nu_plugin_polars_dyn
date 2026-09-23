@@ -29,9 +29,10 @@
 //! `infer_schema_length` past the first frame reaches no further than it does. Where that matters,
 //! pass the schema in `--opts`.
 
-use std::path::PathBuf;
+use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::Arc;
 
+use nu_plugin_polars::scan::ReadAt;
 use polars::prelude::{
     AnonymousScan, AnonymousScanArgs, DataFrame, Expr, IntoLazy, LazyFrame, Operator, PolarsError,
     PolarsResult, ScanArgsAnonymous, SchemaRef, polars_bail,
@@ -39,10 +40,45 @@ use polars::prelude::{
 use polars_core::runtime::THREAD_POOL;
 use polars_core::utils::accumulate_dataframes_vertical;
 use rayon::prelude::*;
-use seekzstdsep::{AsRead, RecordReader, Verifier};
+use seekzstdsep::{AsRead, NoVerify, RecordReader, Verifier, find::Boundary};
 
 /// Records in a `.seek.zst` file are separated by a newline.
 const SEPARATOR: &[u8] = b"\n";
+
+/// What a refusal from `seekzstdsep` names the source by; the plugin points at the argument.
+const LABEL: &str = "the source";
+
+/// `Read + Seek` over a shared [`ReadAt`], with a position of its own: every thread of a scan
+/// holds one over the one handle.
+struct ReadAtCursor {
+    source: Arc<dyn ReadAt>,
+    pos: u64,
+}
+
+impl Read for ReadAtCursor {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let n = self.source.read_at(self.pos, buf)?;
+        self.pos += n as u64;
+        Ok(n)
+    }
+}
+
+impl Seek for ReadAtCursor {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        let (base, offset) = match pos {
+            SeekFrom::Start(n) => (n, 0),
+            SeekFrom::End(d) => (self.source.len()?, d),
+            SeekFrom::Current(d) => (self.pos, d),
+        };
+        self.pos = base.checked_add_signed(offset).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "seek to a negative or overflowing position",
+            )
+        })?;
+        Ok(self.pos)
+    }
+}
 
 /// Turns the bytes of one frame into a `DataFrame`.
 ///
@@ -58,47 +94,49 @@ pub trait FrameParser: Send + Sync {
     fn parse(&self, frame: &[u8], index: usize, schema: &SchemaRef) -> PolarsResult<DataFrame>;
 }
 
-/// A `.seek.zst` file read through `parser`.
+/// A `.seek.zst` source read through `parser`.
 ///
 /// The source is what `seekzstdsep` writes: frames cut at record boundaries, every one but the
 /// last holding the same record count. A frame read by record number from a file that breaks that
 /// is read from the wrong place, so under [`AsRead`] each frame is checked as it is read, as
 /// [`RecordReader::verifying`] describes; what it refuses is a `ComputeError` when the scan is
-/// collected. Under [`NoVerify`](seekzstdsep::NoVerify) nothing is checked and such a file gives
-/// wrong rows.
+/// collected. Under [`NoVerify`] nothing is checked and such a file gives wrong rows.
 pub struct SeekZstScan<V: Verifier = AsRead> {
-    path: PathBuf,
+    source: Arc<dyn ReadAt>,
     parser: Box<dyn FrameParser>,
     /// Turns a freshly opened reader into the one that checks what `V` asks for.
-    verifier: fn(RecordReader) -> RecordReader<V>,
+    verifier: fn(RecordReader<NoVerify, ReadAtCursor>) -> RecordReader<V, ReadAtCursor>,
 }
 
 impl SeekZstScan {
     /// Builds the `LazyFrame`, inferring the schema from the first frame and checking the record
     /// count of each frame it reads.
     ///
-    /// Reads that one frame now; the rest of the file is left until the frame is collected.
-    pub fn lazy_frame(path: PathBuf, parser: Box<dyn FrameParser>) -> PolarsResult<LazyFrame> {
-        Self::lazy_frame_with(path, parser, true)
+    /// Reads that one frame now; the rest of the source is left until the frame is collected.
+    pub fn lazy_frame(
+        source: Arc<dyn ReadAt>,
+        parser: Box<dyn FrameParser>,
+    ) -> PolarsResult<LazyFrame> {
+        Self::lazy_frame_with(source, parser, true)
     }
 
     /// [`Self::lazy_frame`], checking the record count of each frame only when `verify_frames`.
     ///
     /// The choice is made here once, so the reads of a scan that checks nothing carry none of it.
     pub fn lazy_frame_with(
-        path: PathBuf,
+        source: Arc<dyn ReadAt>,
         parser: Box<dyn FrameParser>,
         verify_frames: bool,
     ) -> PolarsResult<LazyFrame> {
         if verify_frames {
             anonymous_scan(SeekZstScan {
-                path,
+                source,
                 parser,
                 verifier: RecordReader::verifying,
             })
         } else {
             anonymous_scan(SeekZstScan {
-                path,
+                source,
                 parser,
                 verifier: std::convert::identity,
             })
@@ -121,18 +159,20 @@ fn anonymous_scan<V: Verifier + 'static>(scan: SeekZstScan<V>) -> PolarsResult<L
 impl<V: Verifier> SeekZstScan<V> {
     fn infer_schema(&self) -> PolarsResult<SchemaRef> {
         let mut reader = self.reader()?;
-        if reader.frame_count() == 0 {
-            polars_bail!(ComputeError: "{}: the file holds no frame", self.path.display());
-        }
         let mut buf = Vec::new();
         self.read_frame(&mut reader, &mut buf, 0)?;
         self.parser.schema(&buf)
     }
 
-    fn reader(&self) -> PolarsResult<RecordReader<V>> {
-        RecordReader::open(self.path.clone(), SEPARATOR)
+    /// A reader of its own over the shared source, for the thread that asks.
+    fn reader(&self) -> PolarsResult<RecordReader<V, ReadAtCursor>> {
+        let cursor = ReadAtCursor {
+            source: self.source.clone(),
+            pos: 0,
+        };
+        RecordReader::from_reader(cursor, LABEL, Boundary::Separator(SEPARATOR.to_vec()))
             .map(self.verifier)
-            .map_err(|e| self.error(e.to_string()))
+            .map_err(|e| error(e.to_string()))
     }
 
     /// Reads frame `index` into `buf`, which is emptied first.
@@ -142,7 +182,7 @@ impl<V: Verifier> SeekZstScan<V> {
     /// a thread reading many frames allocates once and then reuses the capacity.
     fn read_frame(
         &self,
-        reader: &mut RecordReader<V>,
+        reader: &mut RecordReader<V, ReadAtCursor>,
         buf: &mut Vec<u8>,
         index: usize,
     ) -> PolarsResult<()> {
@@ -150,12 +190,12 @@ impl<V: Verifier> SeekZstScan<V> {
         buf.clear();
         reader
             .records_to(index * per_frame, per_frame, buf)
-            .map_err(|e| self.error(format!("frame {index}: {e}")))
+            .map_err(|e| error(format!("frame {index}: {e}")))
     }
+}
 
-    fn error(&self, msg: String) -> PolarsError {
-        PolarsError::ComputeError(format!("{}: {msg}", self.path.display()).into())
-    }
+fn error(msg: String) -> PolarsError {
+    PolarsError::ComputeError(msg.into())
 }
 
 impl<V: Verifier + 'static> AnonymousScan for SeekZstScan<V> {
