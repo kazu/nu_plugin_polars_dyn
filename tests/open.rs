@@ -299,3 +299,128 @@ fn csv_refuses_options_the_chunks_cannot_honour() {
         "the scan key is not taken by csv, got {stderr}"
     );
 }
+
+/// The files a glob fixture holds, in the order of their paths as strings.
+const GLOB_FILES: [&str; 3] = ["x1", "x10", "x2"];
+
+/// Saves a one-row frame per name of `GLOB_FILES` as `<name>.<ext>`, each with its own row, and
+/// returns the directory. A `jsonl` file is saved as ndjson and renamed.
+fn glob_fixture(ext: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let save_ext = if ext == "jsonl" { "ndjson" } else { ext };
+    for name in GLOB_FILES.iter().rev() {
+        let saved = dir.path().join(format!("{name}.{save_ext}"));
+        run_nu(&format!(
+            "[[a b]; [{} {name}]] | polars_dyn into-df | polars_dyn save {}",
+            name.len(),
+            saved.display()
+        ));
+        std::fs::rename(&saved, dir.path().join(format!("{name}.{ext}"))).expect("rename");
+    }
+    dir
+}
+
+/// Opens each file of `GLOB_FILES` on its own and appends the frames, as nuon.
+fn one_by_one_nuon(dir: &tempfile::TempDir, ext: &str) -> String {
+    let paths: Vec<String> = GLOB_FILES
+        .iter()
+        .map(|name| format!("'{}'", dir.path().join(format!("{name}.{ext}")).display()))
+        .collect();
+    run_nu(&format!(
+        "[{}] | each {{|p| polars_dyn open $p | polars_dyn collect | polars_dyn into-nu }} \
+         | flatten | to nuon",
+        paths.join(" ")
+    ))
+    .trim()
+    .to_owned()
+}
+
+/// A glob of local files opens each match and stacks the frames in the order of the paths.
+#[test]
+fn glob_stacks_the_matches_in_path_order() {
+    for ext in ["jsonl", "csv", "parquet", "arrow"] {
+        let dir = glob_fixture(ext);
+        let out = run_nu(&format!(
+            "polars_dyn open '{}/x*.{ext}' | polars_dyn collect | polars_dyn into-nu | to nuon",
+            dir.path().display()
+        ));
+        assert_eq!(out.trim(), one_by_one_nuon(&dir, ext), "{ext}");
+        assert_eq!(
+            out.trim(),
+            r#"[[a, b]; [2, "x1"], [3, "x10"], [2, "x2"]]"#,
+            "{ext}"
+        );
+    }
+}
+
+/// A relative glob is expanded against the engine's current directory.
+#[test]
+fn relative_glob_is_expanded_in_the_current_directory() {
+    let dir = glob_fixture("csv");
+    let out = run_nu(&format!(
+        "cd '{}'; polars_dyn open 'x*.csv' | polars_dyn collect | polars_dyn into-nu | to nuon",
+        dir.path().display()
+    ));
+    assert_eq!(out.trim(), one_by_one_nuon(&dir, "csv"));
+}
+
+/// As polars' own path scan does, a glob skips directories and empty files and orders the matches
+/// as strings: `a-b/x.csv` comes before `a/x.csv`.
+#[test]
+fn glob_skips_directories_and_empty_files_and_sorts_as_strings() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for sub in ["a", "a-b", "a/sub.csv"] {
+        std::fs::create_dir_all(dir.path().join(sub)).expect("create dir");
+    }
+    std::fs::write(dir.path().join("a/x.csv"), "n\n1\n").expect("write fixture");
+    std::fs::write(dir.path().join("a-b/x.csv"), "n\n2\n").expect("write fixture");
+    std::fs::write(dir.path().join("a/y.csv"), "").expect("write fixture");
+    let out = run_nu(&format!(
+        "polars_dyn open '{}/*/*.csv' | polars_dyn collect | polars_dyn into-nu | to nuon",
+        dir.path().display()
+    ));
+    assert_eq!(out.trim(), "[[n]; [2], [1]]");
+}
+
+/// As in upstream, a glob metacharacter is looked for in the absolute path, so a current
+/// directory `a[1]` makes `x.csv` a glob that matches `a1/x.csv`.
+#[test]
+fn glob_is_looked_for_in_the_current_directory_too() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for sub in ["a[1]", "a1"] {
+        std::fs::create_dir(dir.path().join(sub)).expect("create dir");
+    }
+    std::fs::write(dir.path().join("a1/x.csv"), "n\n1\n").expect("write fixture");
+    let out = run_nu(&format!(
+        "cd '{}'; polars_dyn open x.csv | polars_dyn collect | polars_dyn into-nu | to nuon",
+        dir.path().join("a[1]").display()
+    ));
+    assert_eq!(out.trim(), "[[n]; [1]]");
+}
+
+#[test]
+fn glob_without_a_match_is_an_error() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let pattern = format!("{}/y*.csv", dir.path().display());
+    let stderr = fail_nu(&format!("polars_dyn open '{pattern}'"));
+    assert!(
+        stderr.contains(&format!("No file matches `{pattern}`")),
+        "stderr:\n{stderr}"
+    );
+}
+
+/// Files whose columns differ are not aligned: the error of polars' `concat` comes out.
+#[test]
+fn glob_of_files_with_other_columns_is_an_error() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("x1.csv"), "a,b\n1,2\n").expect("write fixture");
+    std::fs::write(dir.path().join("x2.csv"), "a,c\n3,4\n").expect("write fixture");
+    let stderr = fail_nu(&format!(
+        "polars_dyn open '{}/x*.csv' | polars_dyn collect",
+        dir.path().display()
+    ));
+    assert!(
+        stderr.contains("unable to vstack, column names don't match"),
+        "stderr:\n{stderr}"
+    );
+}
