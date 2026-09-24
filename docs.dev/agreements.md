@@ -103,16 +103,27 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
      列に足し、接尾辞を落とす。一致しなくなるまで繰り返す。
      `ssh://h/log/x.jsonl.seek.zst` → `ssh`, `seek-zst`, `ndjson`。`x.parquet` → `file`, `parquet`。
      1 つも剥けなければ、接尾辞を持つ scan の名前を列挙してエラー(`No scan source for `./x.unknown``、
-     `registered: parquet, csv, ipc, ndjson, ...`)。
-  3. 先頭に `open(url)`、途中に `wrap(bytes)`、末尾に `scan(bytes)` を呼ぶ。末尾が `scan` を
-     持たなければその scan のデフォルトのエラー(`./x.seek.zst` は `seek-zst` が frame を返せない)。
-  4. `--format a,b,c` は 2 の結果を置き換える(scheme は文字列から)。知らない名前は登録名を
+     `registered: parquet, csv, ipc, ndjson, ...`)。接尾辞は glob を展開する前の文字列から剥く
+     (`data/*.jsonl` → `file`, `ndjson`)。
+  3. scheme 無しのパスは、1 の絶対パスに glob のメタ文字(`*` `?` `[`)があればローカルの
+     ファイルシステムで展開する(カレントディレクトリの部分も含めて見る。本家と同じ)。規則は polars の path scan(本家の `polars open`)と同じにする:
+     同じ `glob` crate で展開し、ディレクトリと空のファイルを除き、パスを文字列の順に並べる。
+     0 件はエラー(``No file matches `data/*.jsonl` ``)。メタ文字が無ければ今と同じ 1 件。
+     scheme 付きの source は展開しない。
+     `AnonymousScan` には polars がパスの一覧を渡す欄が無いので、複数ファイルは plugin が持つ。
+  4. 3 の 1 件ずつに、先頭の `open(url)`、途中の `wrap(bytes)`、末尾の `scan(bytes)` を呼ぶ。
+     末尾が `scan` を持たなければその scan のデフォルトのエラー(`./x.seek.zst` は `seek-zst` が
+     frame を返せない)。得た LazyFrame は polars の `concat`(縦、デフォルトの `UnionArgs`)で
+     1 つにし、1 件ならそのまま返す。列の揃わないファイルは collect のときに `concat` のエラーになる。
+     scan は今と同じく 1 回に 1 ファイルの bytes を受けるだけで、glob も前後も知らない。
+  5. `--format a,b,c` は 2 の結果を置き換える(scheme は文字列から)。知らない名前は登録名を
      列挙してエラー。
-  5. `--opts` は **scan 名をキーにした record**(`--opts {csv: {has_header: false}, ssh: {port: 2222}}`)。
+  6. `--opts` は **scan 名をキーにした record**(`--opts {csv: {has_header: false}, ssh: {port: 2222}}`)。
      名前ごとに JSON bytes にして各 scan に渡し、省略された scan には空を渡す。chain に無い名前は
      エラー(`unknown scan `nope` in --opts`)。中身は scan ごとの契約で、plugin は覗かない。
+     3 で展開した全ファイルに同じものを渡す。
      形式固有の flag(`--delimiter` 等)は付けない。`--eager` も付けない(`collect` で足りる)。
-  6. 起動時に名前・scheme・接尾辞の重複を 1 回検査する。
+  7. 起動時に名前・scheme・接尾辞の重複を 1 回検査する。
 
 - **plugin 本体が持つ scan は 5 つ**: `file`(scheme `file`。scheme 無しの既定。`File` を `ReadAt` に)
   と、parquet / csv / ipc / ndjson(接尾辞。bytes から読む)。それ以外は crate で、`nu-polars-dyn-build`
