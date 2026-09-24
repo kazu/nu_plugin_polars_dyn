@@ -177,6 +177,32 @@ fn csv_seek_zst_reads_the_header_once() {
     assert_eq!(rows.trim(), "100", "every row but the header must survive");
 }
 
+/// A glob of `.seek.zst` files runs the chain once per match and stacks the frames in the order
+/// of the paths, as opening each file on its own and appending does.
+#[test]
+fn ndjson_seek_zst_glob_stacks_the_matches_in_path_order() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let later: String = (40..80)
+        .map(|i| format!("{{\"n\":{i},\"name\":\"row{i}\"}}\n"))
+        .collect();
+    let (_, second) = fixture(&dir, "x2.jsonl", &later, 256);
+    let (_, first) = fixture(&dir, "x1.jsonl", &ndjson_text(), 256);
+    let opts = opts_for(&first);
+    let one_by_one = run_nu(&format!(
+        "['{}' '{}'] | each {{|p| polars_dyn open $p {opts} | polars_dyn collect \
+         | polars_dyn into-nu }} | flatten | to nuon",
+        first.display(),
+        second.display()
+    ));
+    let globbed = run_nu(&format!(
+        "polars_dyn open '{}/*.jsonl.seek.zst' {opts} | polars_dyn collect \
+         | polars_dyn into-nu | to nuon",
+        dir.path().display()
+    ));
+    assert_eq!(globbed, one_by_one);
+    assert!(globbed.contains("[0, \"row0\"]") && globbed.contains("[79, \"row79\"]"));
+}
+
 /// `n_rows` is the one slice polars pushes into an anonymous scan.
 #[test]
 fn ndjson_seek_zst_takes_the_first_rows() {

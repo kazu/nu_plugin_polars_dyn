@@ -31,7 +31,9 @@ No Python anywhere.
   **chain** of scan sources. `ssh://host/log/events.jsonl.seek.zst` is three steps, `ssh` →
   `seek-zst` → `ndjson`: the scheme opens, the suffixes decompress and read in turn. No step knows
   its neighbours, so any opener, compression and format combine. The chain is `--format`, each
-  step's options are a record in `--opts`.
+  step's options are a record in `--opts`. A local glob (`data/*.jsonl`) runs the chain per file
+  and stacks the frames. Unlike upstream, several parquet or ipc files are not read in parallel,
+  and hive partitions are not read.
 - **Custom scanners** — a scheme (`ssh://`), a compression (`.seek.zst`) or a format (`.logfmt`)
   is a Rust crate you write, and [`nu-polars-dyn-build`](docs/cli.md#nu-polars-dyn-build) compiles
   it in and hands you **your own plugin binary**. As many crates as you like go into one binary.
@@ -70,6 +72,7 @@ plugin use polars_dyn
 polars_dyn open data.csv | polars_dyn collect
 polars_dyn open data.csv --opts {csv: {has_header: false}} | polars_dyn collect
 polars_dyn open data.txt --format csv | polars_dyn collect
+polars_dyn open 'logs/*.jsonl' | polars_dyn collect
 polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | polars_dyn collect --streaming
 polars_dyn open events.jsonl.seek.zst | polars_dyn collect                              # a binary with seekzstdsep_scan built in
 polars_dyn open ssh://host/var/log/events.jsonl.seek.zst | polars_dyn first 10 | polars_dyn collect   # and ssh_scan

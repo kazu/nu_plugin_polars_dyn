@@ -5,7 +5,7 @@ use nu_protocol::{
     Category, DataSource, Example, LabeledError, PipelineData, PipelineMetadata, ShellError,
     Signature, Span, Spanned, SyntaxShape, Type, Value, shell_error::generic::GenericError,
 };
-use polars::prelude::{LazyFrame, PolarsError};
+use polars::prelude::{LazyFrame, PolarsError, UnionArgs, concat};
 
 use crate::{
     PolarsPlugin,
@@ -16,6 +16,10 @@ use crate::{
 };
 
 /// `polars_dyn open <source> [--format <a,b,c>] [--opts <record>]` → LazyFrame.
+///
+/// A local path whose absolute form, the current directory included, has a glob opens every
+/// match through the same chain and stacks the frames in the order of the paths as strings; a
+/// URL with a scheme is not expanded.
 ///
 /// The output carries the source string as `DataSource::FilePath`, which `polars_dyn save`
 /// checks to refuse writing into the file a frame is still being read from.
@@ -38,7 +42,7 @@ impl PluginCommand for Open {
             .required(
                 "source",
                 SyntaxShape::String,
-                "File path, or a URL whose scheme a registered scan source opens.",
+                "File path or glob, or a URL whose scheme a registered scan source opens.",
             )
             .named(
                 "format",
@@ -66,6 +70,11 @@ impl PluginCommand for Open {
             Example {
                 description: "Open a csv file without a header row",
                 example: "polars_dyn open data.csv --opts {csv: {has_header: false}}",
+                result: None,
+            },
+            Example {
+                description: "Open every ndjson file of a directory as one frame",
+                example: "polars_dyn open 'logs/*.jsonl'",
                 result: None,
             },
             Example {
@@ -109,7 +118,11 @@ fn command(
     )?;
     let opts = split_opts(opts.as_ref(), &chain)?;
 
-    let lazy = run_chain(&chain, &source, &opts, spanned_source.span)?;
+    let frames = expand_local_glob(&spanned_source, source)?
+        .iter()
+        .map(|path| run_chain(&chain, path, &opts, spanned_source.span))
+        .collect::<Result<Vec<_>, _>>()?;
+    let lazy = stack_frames(frames, spanned_source.span)?;
     let value = NuLazyFrame::from(lazy).cache_and_to_value(plugin, engine, call.head)?;
     let metadata = PipelineMetadata::default()
         .with_data_source(DataSource::FilePath(spanned_source.item.into()));
@@ -161,6 +174,60 @@ fn resolve_source(
         return Ok(spanned_source.item.clone());
     }
     Ok(Resource::new(plugin, engine, spanned_source)?.as_string())
+}
+
+/// The files `source`, the string [`resolve_source`] made of `spanned_source`, names: when
+/// `source` is a local path with a glob metacharacter (`*`, `?`, `[`), the matches that are
+/// neither a directory nor empty, sorted as strings, else `source` alone. These are the rules
+/// polars' own path scan expands a glob by. A glob without a match is an error, as is a match
+/// whose metadata cannot be read.
+fn expand_local_glob(
+    spanned_source: &Spanned<String>,
+    source: String,
+) -> Result<Vec<String>, ShellError> {
+    let item = &spanned_source.item;
+    if url_scheme(&source).is_some() || !source.contains(['*', '?', '[']) {
+        return Ok(vec![source]);
+    }
+    let glob_error = |detail: String| {
+        ShellError::Generic(GenericError::new(
+            format!("Could not expand `{item}`"),
+            detail,
+            spanned_source.span,
+        ))
+    };
+    let mut files = Vec::new();
+    for path in glob::glob(&source).map_err(|e| glob_error(e.to_string()))? {
+        let path = path.map_err(|e| glob_error(e.to_string()))?;
+        let metadata = path.metadata().map_err(|e| glob_error(e.to_string()))?;
+        if !metadata.is_dir() && metadata.len() > 0 {
+            files.push(path.to_string_lossy().into_owned());
+        }
+    }
+    files.sort_unstable();
+    if files.is_empty() {
+        return Err(ShellError::Generic(GenericError::new(
+            format!("No file matches `{item}`"),
+            "",
+            spanned_source.span,
+        )));
+    }
+    Ok(files)
+}
+
+/// Stacks the frames of the files of a source in their order with polars' `concat`; frames whose
+/// columns differ fail when the result is collected. A single frame is returned as it is.
+fn stack_frames(frames: Vec<LazyFrame>, span: Span) -> Result<LazyFrame, ShellError> {
+    match <[LazyFrame; 1]>::try_from(frames) {
+        Ok([frame]) => Ok(frame),
+        Err(frames) => concat(frames, UnionArgs::default()).map_err(|e| {
+            ShellError::Generic(GenericError::new(
+                "Could not concatenate the files",
+                e.to_string(),
+                span,
+            ))
+        }),
+    }
 }
 
 /// Cuts the `--opts` record into one JSON blob per scan source of `chain`, keyed by name. A key

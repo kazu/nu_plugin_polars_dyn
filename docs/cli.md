@@ -32,8 +32,16 @@ Nothing is collected, so what comes back is a `LazyFrame` that has not read the 
 2. The **longest** registered suffix ending the string is stripped and its source appended; this
    repeats until no suffix matches (`x.jsonl.seek.zst` strips `.seek.zst`, then `.jsonl`). If
    nothing was stripped, the error lists the sources a suffix can pick.
-3. The first source opens the URL, every one in between wraps the bytes, the last reads them into
-   the frame. A last source that only wraps (`./x.seek.zst` alone) is an error naming it.
+3. A path without a scheme is made absolute against the current directory, and if that has a glob
+   metacharacter (`*`, `?`, `[`), in the current directory too, it is expanded on the local file
+   system; the suffixes are those of the pattern (`data/*.jsonl` is `file`, `ndjson`). As in
+   upstream, directories and empty files are skipped and the matches are sorted as strings. A
+   glob without a match is an error. A URL with a scheme is never expanded.
+4. For each file, the first source opens the URL, every one in between wraps the bytes, the last
+   reads them into the frame. A last source that only wraps (`./x.seek.zst` alone) is an error
+   naming it. The frames of a glob are stacked in that order; files whose columns differ are an
+   error when collected, not aligned. Unlike upstream, several parquet or ipc files are not read in
+   parallel as one scan, and hive partitions are not read.
 
 ### `--format`
 

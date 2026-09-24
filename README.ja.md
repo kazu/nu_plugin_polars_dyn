@@ -30,7 +30,9 @@ nushell の [`nu_plugin_polars`][upstream] の fork です。パイプを流れ�
   **chain** に置き換えました。`ssh://host/log/events.jsonl.seek.zst` は `ssh` → `seek-zst` →
   `ndjson` の 3 段で、scheme が開き、接尾辞が順に展開と読み込みを担います。どの段も前後を
   知らないので、開き方・圧縮・フォーマットは何とでも組み合わさります。chain は `--format`、
-  各段のオプションは `--opts` の record で渡します。
+  各段のオプションは `--opts` の record で渡します。ローカルの glob(`data/*.jsonl`)は
+  ファイルごとに chain を通して縦に繋ぎます。本家と違い、parquet / ipc の複数ファイルの
+  並列読みと hive partition はありません。
 - **カスタムスキャナ** — scheme(`ssh://`)、圧縮(`.seek.zst`)、フォーマット(`.logfmt`)の
   どれも、自分で書いた Rust の crate で追加できます。[`nu-polars-dyn-build`](docs/cli.md#nu-polars-dyn-build)
   がそれを組み込んだ**自分用の plugin バイナリ**を作ります。何本でも組み込めます。
@@ -68,6 +70,7 @@ plugin use polars_dyn
 polars_dyn open data.csv | polars_dyn collect
 polars_dyn open data.csv --opts {csv: {has_header: false}} | polars_dyn collect
 polars_dyn open data.txt --format csv | polars_dyn collect
+polars_dyn open 'logs/*.jsonl' | polars_dyn collect
 polars_dyn open data.parquet | polars_dyn filter ((polars_dyn col a) > 1) | polars_dyn collect --streaming
 polars_dyn open events.jsonl.seek.zst | polars_dyn collect                              # seekzstdsep_scan を組み込んだバイナリ
 polars_dyn open ssh://host/var/log/events.jsonl.seek.zst | polars_dyn first 10 | polars_dyn collect   # ssh_scan も
