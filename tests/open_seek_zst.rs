@@ -1,6 +1,6 @@
 //! `polars_dyn open` on a `.seek.zst` source reads the same rows as the plain text file: the
-//! chain `file`, `seek-zst`, `ndjson` (or `csv`) hands the decompressed bytes to the built-in
-//! reader, which cuts them at newlines across frame boundaries and applies the pushdowns polars
+//! chain `file`, `seek-zst`, `ndjson` (or `csv`) hands the decompressed records to the built-in
+//! reader, which gathers them into chunks across frame boundaries and applies the pushdowns polars
 //! hands an anonymous scan. The `seek-zst` source lives in the `seekzstdsep_scan` crate, so this
 //! builds a plugin with that crate compiled in and runs the `nu` on `PATH` against it.
 //!
@@ -245,7 +245,8 @@ fn ndjson_seek_zst_applies_the_pushed_down_projection() {
     assert_eq!(query_nuon(&seek_zst, query), query_nuon(&plain, query));
 }
 
-/// The format's options go to the format under its name, and `seek-zst` takes none.
+/// The format's options go to the format under its name, and `seek-zst` refuses a key it does not
+/// know.
 #[test]
 fn seek_zst_opts_are_cut_by_scan_name() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -259,12 +260,9 @@ fn seek_zst_opts_are_cut_by_scan_name() {
     assert_eq!(nuon.trim(), "[[\"column_1\", \"column_2\"]; [n, name]]");
 
     let stderr = fail_nu(&format!(
-        "polars_dyn open {path} --opts {{seek-zst: {{verify_frames: false}}}} | polars_dyn collect"
+        "polars_dyn open {path} --opts {{seek-zst: {{verify: false}}}} | polars_dyn collect"
     ));
-    assert!(
-        stderr.contains("`seek-zst` takes no options, got `verify_frames`"),
-        "got {stderr}"
-    );
+    assert!(stderr.contains("unknown field `verify`"), "got {stderr}");
 
     let stderr = fail_nu(&format!(
         "polars_dyn open {path} --opts {{nope: {{}}}} | polars_dyn collect"
@@ -334,17 +332,125 @@ fn ndjson_seek_zst_reads_records_of_varying_length() {
     assert_eq!(collect_nuon(&seek_zst), collect_nuon(&plain));
 }
 
-/// A file whose frames hold different record counts is read by decompressed offset, so it gives
-/// the plain file's rows. (Up to 016 it was refused, since frames were looked up by record number.)
+/// A file whose frames hold different record counts is refused by default. With
+/// `verify_frames: false` it is read, but a frame is found by record number, so the rows come from
+/// the wrong places and the answer is not the plain file's.
 #[test]
-fn seek_zst_reads_frames_of_uneven_record_counts() {
+fn seek_zst_verifies_the_record_count_of_every_frame() {
     let dir = tempfile::tempdir().expect("tempdir");
-    for (name, text) in [
-        ("uneven.csv", uneven_csv_text()),
-        ("uneven.jsonl", uneven_ndjson_text()),
+    for (name, text, format) in [
+        ("uneven.csv", uneven_csv_text(), "csv"),
+        ("uneven.jsonl", uneven_ndjson_text(), "ndjson"),
     ] {
         let (plain, seek_zst) = uneven_fixture(&dir, name, &text);
-        assert_eq!(collect_nuon(&seek_zst), collect_nuon(&plain), "{name}");
+        let path = seek_zst.display();
+        let stderr = fail_nu(&format!("polars_dyn open {path} | polars_dyn collect"));
+        assert!(stderr.contains("frame"), "{name}: got {stderr}");
+
+        let unverified = nu(&format!(
+            "polars_dyn open {path} --opts {{seek-zst: {{verify_frames: false}}, \
+             {format}: {{chunk_size: 256}}}} | polars_dyn collect | polars_dyn into-nu | to nuon"
+        ));
+        assert_ne!(
+            String::from_utf8_lossy(&unverified.stdout).trim(),
+            collect_nuon(&plain),
+            "{name}"
+        );
+    }
+}
+
+/// `first n` reaches `seek-zst` as a record count, so the frames past those records are neither
+/// decompressed nor read: a later frame that is broken fails the whole read but not the first rows.
+#[test]
+fn seek_zst_reads_only_the_frames_the_first_rows_need() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let first = "[[n, name]; [0, \"row0\"], [1, \"row1\"], [2, \"row2\"]]";
+    for (name, text) in [("events.jsonl", ndjson_text()), ("data.csv", csv_text())] {
+        let (plain, seek_zst) = fixture(&dir, name, &text, 256);
+        let mut bytes = std::fs::read(&seek_zst).expect("read the fixture");
+        let at = bytes.len() * 3 / 4;
+        for byte in &mut bytes[at - 8..at] {
+            *byte ^= 0xff;
+        }
+        std::fs::write(&seek_zst, bytes).expect("break a later frame");
+
+        assert_eq!(
+            query_nuon(&seek_zst, "polars_dyn slice 0 3"),
+            first,
+            "{name}"
+        );
+        let path = seek_zst.display();
+        let whole = nu(&format!(
+            "polars_dyn open {path} | polars_dyn collect | polars_dyn into-nu | to nuon"
+        ));
+        assert!(
+            !whole.status.success()
+                || String::from_utf8_lossy(&whole.stdout).trim() != collect_nuon(&plain),
+            "{name}: the broken frame was not broken"
+        );
+    }
+}
+
+/// `record_filter` drops the records without its bytes before they are parsed, and `first n`
+/// counts the records it keeps.
+#[test]
+fn seek_zst_filters_records_before_parsing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (_, seek_zst) = fixture(&dir, "events.jsonl", &ndjson_text(), 256);
+    let path = seek_zst.display();
+    let names = |query: &str| {
+        run_nu(&format!(
+            "polars_dyn open {path} --opts {{seek-zst: {{record_filter: \"row1\"}}}} \
+             {query}| polars_dyn collect | polars_dyn into-nu | get name | to nuon"
+        ))
+        .trim()
+        .to_owned()
+    };
+    let matches: Vec<String> = std::iter::once(1)
+        .chain(10..20)
+        .map(|i| format!("\"row{i}\""))
+        .collect();
+    assert_eq!(names(""), format!("[{}]", matches.join(", ")));
+    assert_eq!(
+        names("| polars_dyn slice 0 3 "),
+        "[\"row1\", \"row10\", \"row11\"]"
+    );
+}
+
+/// The finder names where a record ends as seekzstdsep's `--finder` does; `sep` with a newline is
+/// the default, and a name seekzstdsep does not know is refused.
+#[test]
+fn seek_zst_takes_the_finder_by_name() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (plain, seek_zst) = fixture(&dir, "events.jsonl", &ndjson_text(), 256);
+    let path = seek_zst.display();
+    let named = run_nu(&format!(
+        "polars_dyn open {path} --opts {{seek-zst: {{finder: sep, finder_arg: \"\\n\"}}}} \
+         | polars_dyn collect | polars_dyn into-nu | to nuon"
+    ));
+    assert_eq!(named.trim(), collect_nuon(&plain));
+
+    let stderr = fail_nu(&format!(
+        "polars_dyn open {path} --opts {{seek-zst: {{finder: nope}}}} | polars_dyn collect"
+    ));
+    assert!(stderr.contains("unknown --finder nope"), "got {stderr}");
+}
+
+/// A record need not be a row: blank lines between the ndjson rows make `first n` ask for more
+/// records than it first did, and it still answers as the plain file does.
+#[test]
+fn ndjson_seek_zst_takes_the_first_rows_past_blank_lines() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let text: String = (0..40)
+        .map(|i| format!("{{\"n\":{i},\"name\":\"row{i}\"}}\n\n\n"))
+        .collect();
+    let (plain, seek_zst) = fixture(&dir, "blank.jsonl", &text, 256);
+    for query in ["polars_dyn slice 0 5", "polars_dyn slice 0 20"] {
+        assert_eq!(
+            query_nuon(&seek_zst, query),
+            query_nuon(&plain, query),
+            "{query}"
+        );
     }
 }
 
@@ -623,4 +729,66 @@ fn uneven_ndjson_text() -> String {
     growing_rows()
         .map(|(i, name)| format!("{{\"n\":{i},\"name\":\"{name}\"}}\n"))
         .collect()
+}
+
+/// A last record without the separator after it is a record like any other: seekzstdsep places it
+/// past the records the frames hold when the last frame is full, and it still comes back. A file of
+/// one frame always has its last frame full; files of many frames are read as the plain file is too.
+#[test]
+fn seek_zst_reads_a_last_record_without_a_newline() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for (name, text, frame_size) in [
+        (
+            "one.jsonl",
+            "{\"n\":1}\n{\"n\":2}\n{\"n\":3}".to_owned(),
+            64 * 1024,
+        ),
+        ("one.csv", "n\n1\n2".to_owned(), 64 * 1024),
+        ("many.jsonl", ndjson_text().trim_end().to_owned(), 256),
+        ("many.csv", csv_text().trim_end().to_owned(), 256),
+    ] {
+        let plain = dir.path().join(name);
+        std::fs::write(&plain, &text).expect("write the plain file");
+        let seek_zst = dir.path().join(format!("{name}.seek.zst"));
+        let mut compressed = Vec::new();
+        convert_to_seekable_zst_reader(
+            text.as_bytes(),
+            &mut compressed,
+            frame_size,
+            true,
+            b"\n",
+            None,
+        )
+        .expect("compress to seekable zstd");
+        std::fs::write(&seek_zst, compressed).expect("write the seek.zst file");
+        assert_eq!(collect_nuon(&seek_zst), collect_nuon(&plain), "{name}");
+    }
+}
+
+/// The csv header is the first record `record_filter` keeps, even when every record of frame 0 is
+/// dropped: the answer is the plain file of the kept lines, whichever frame the first of them is in.
+#[test]
+fn csv_seek_zst_takes_the_header_from_the_first_kept_record() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let text = "k\nx\nx\ny1\ny2\ny3\n";
+    let seek_zst = dir.path().join("head.csv.seek.zst");
+    let mut compressed = Vec::new();
+    convert_to_seekable_zst_reader(text.as_bytes(), &mut compressed, 6, true, b"\n", None)
+        .expect("compress to seekable zstd");
+    std::fs::write(&seek_zst, compressed).expect("write the seek.zst file");
+    let reader = RecordReader::open(seek_zst.clone(), b"\n").expect("open the fixture");
+    assert_eq!(
+        (reader.frame_count(), reader.records_per_frame()),
+        (2, 3),
+        "frame 0 must hold `k`, `x`, `x` alone"
+    );
+
+    let kept = dir.path().join("kept.csv");
+    std::fs::write(&kept, "y1\ny2\ny3\n").expect("write the kept lines");
+    let filtered = run_nu(&format!(
+        "polars_dyn open {} --opts {{seek-zst: {{record_filter: y}}}} | polars_dyn collect \
+         | polars_dyn into-nu | to nuon",
+        seek_zst.display()
+    ));
+    assert_eq!(filtered.trim(), collect_nuon(&kept));
 }

@@ -18,12 +18,15 @@ polars_dyn open <source> [--format (-f) <a,b,c>] [--opts (-o) <record>]  → Laz
 
 `source` names a **chain** of scan sources: the URL scheme picks the first, which opens the bytes,
 and every suffix at the end of the string picks one more, which either turns the bytes into other
-bytes or reads them into a frame. `ssh://host/log/events.jsonl.seek.zst` is `ssh`, `seek-zst`,
-`ndjson`: sftp opens the file, `seek-zst` decompresses it, `ndjson` reads the lines. A path without
-a scheme is opened by `file`. No source in the chain knows what comes before or after it, so any
-opener works with any decompressor and any format.
+bytes or records, or reads them into a frame. `ssh://host/log/events.jsonl.seek.zst` is `ssh`,
+`seek-zst`, `ndjson`: sftp opens the file, `seek-zst` decompresses it into records, `ndjson` reads
+them. A path without a scheme is opened by `file`. No source in the chain knows what comes before
+or after it, so any opener works with any decompressor and any format.
 
-Nothing is collected, so what comes back is a `LazyFrame` that has not read the rows yet.
+Nothing is collected, so what comes back is a `LazyFrame` that has not read the rows yet. What the
+query asks for reaches every source of the chain when it is collected: `polars_dyn first 10` over
+`events.jsonl.seek.zst` decompresses only the frames holding the first records, and reads only
+those from the file.
 
 ### The chain
 
@@ -37,8 +40,8 @@ Nothing is collected, so what comes back is a `LazyFrame` that has not read the 
    system; the suffixes are those of the pattern (`data/*.jsonl` is `file`, `ndjson`). As in
    upstream, directories and empty files are skipped and the matches are sorted as strings. A
    glob without a match is an error. A URL with a scheme is never expanded.
-4. For each file, the first source opens the URL, every one in between wraps the bytes, the last
-   reads them into the frame. A last source that only wraps (`./x.seek.zst` alone) is an error
+4. For each file, the first source opens the URL, every one in between wraps what it is handed,
+   the last reads that into the frame. A last source that only wraps (`./x.seek.zst` alone) is an error
    naming it. The frames of a glob are stacked in that order; files whose columns differ are an
    error when collected, not aligned. Unlike upstream, several parquet or ipc files are not read in
    parallel as one scan, and hive partitions are not read.

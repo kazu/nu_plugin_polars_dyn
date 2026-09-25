@@ -12,7 +12,9 @@
 //! ```
 //!
 //! csv and ndjson are read by the plugin's own chunked scan instead, which cuts the bytes at
-//! newlines and hands each chunk to polars' reader; `chunk_size` is the width of those chunks. A
+//! newlines, or takes the units of records a source before it hands on, and hands each chunk to polars'
+//! reader; `chunk_size` is the width of the chunks it cuts. parquet and ipc read the units of such a
+//! source one after another as the bytes of the file. A
 //! newline inside a quoted csv field is a newline to the cut, and a cut there is a parse error,
 //! so a csv with such fields is read with a `chunk_size` of at least its length.
 //! Because every chunk is read by a reader of its own holding the same options, the options whose
@@ -41,7 +43,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Map, Value};
 
 use super::{
-    ReadAt, ScanSource,
+    Bytes, ReadAt, ScanSource,
     chunked::{ChunkParser, ChunkedScan},
     no_opts,
     opts::{overlay_opts, parse_opts},
@@ -93,10 +95,10 @@ impl ScanSource for Parquet {
         &[".parquet", ".parq", ".pq"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let (options, scan_args) = split_opts(ParquetOptions::default(), opts)?;
         Ok(
-            DslBuilder::scan_parquet(buffers(&*source)?, options, scan_args)?
+            DslBuilder::scan_parquet(buffers(&source)?, options, scan_args)?
                 .build()
                 .into(),
         )
@@ -112,13 +114,11 @@ impl ScanSource for Ipc {
         &[".arrow", ".ipc"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let (options, scan_args) = split_opts(IpcScanOptions::default(), opts)?;
-        Ok(
-            DslBuilder::scan_ipc(buffers(&*source)?, options, scan_args)?
-                .build()
-                .into(),
-        )
+        Ok(DslBuilder::scan_ipc(buffers(&source)?, options, scan_args)?
+            .build()
+            .into())
     }
 }
 
@@ -131,7 +131,7 @@ impl ScanSource for Csv {
         &[".csv"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let options = overlay_opts(CsvReadOptions::default(), &Value::Object(parse_opts(opts)?))?;
         reject_options_the_chunks_cannot_honour(&options)?;
         let chunk_size = options.chunk_size;
@@ -148,20 +148,34 @@ impl ScanSource for NdJson {
         &[".ndjson", ".jsonl"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let options = overlay_opts(ndjson_defaults(), &Value::Object(parse_opts(opts)?))?;
         let chunk_size = options.chunk_size.get();
         ChunkedScan::lazy_frame(source, Box::new(NdJsonChunks { options }), chunk_size)
     }
 }
 
-/// The whole of `source` as the one in-memory buffer polars' own lazy scan reads.
-fn buffers(source: &dyn ReadAt) -> PolarsResult<ScanSources> {
-    let len = usize::try_from(source.len()?)
-        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-    let mut bytes = vec![0; len];
-    let read = read_fully(source, 0, &mut bytes)?;
-    bytes.truncate(read);
+/// The whole of `source` as the one in-memory buffer polars' own lazy scan reads: every byte, or
+/// every unit of records one after another.
+fn buffers(source: &Bytes) -> PolarsResult<ScanSources> {
+    let bytes = match source {
+        Bytes::At(source) => {
+            let len = usize::try_from(source.len()?)
+                .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+            let mut bytes = vec![0; len];
+            let read = read_fully(&**source, 0, &mut bytes)?;
+            bytes.truncate(read);
+            bytes
+        }
+        Bytes::Records(records) => {
+            let mut bytes = Vec::new();
+            let mut index = 0;
+            while records.read_unit(index, &mut bytes)? {
+                index += 1;
+            }
+            bytes
+        }
+    };
     Ok(ScanSources::Buffers(Arc::from([Buffer::from(bytes)])))
 }
 

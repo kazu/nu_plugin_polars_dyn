@@ -22,14 +22,52 @@ use std::sync::Arc;
 use nu_protocol::{ShellError, Span, shell_error::generic::GenericError};
 use polars::prelude::{LazyFrame, PolarsResult, polars_bail};
 
-/// One step of a chain: a way to open a URL, to wrap bytes into other bytes, or to read bytes
-/// into a `LazyFrame`.
+/// Records handed on by a source that knows where they end, in units read by number.
+///
+/// A unit is what the source can read on its own — a frame of a compressed file — and holds whole
+/// records, each with the bytes that end it. The units in the order of their numbers are the
+/// records in the order of the source, and any of them can be read from several threads at once,
+/// so the source after it reads as many at a time as it has threads and stops once it has what the
+/// query asked for. It is opened when the chain is built and read when the frame is collected.
+pub trait Records: Send + Sync {
+    /// Appends unit `index` to `dst` and returns `true`, or returns `false` when there is no such
+    /// unit. A unit may hold no record.
+    fn read_unit(&self, index: usize, dst: &mut Vec<u8>) -> PolarsResult<bool>;
+
+    /// How many units there are, or `None` when that is only known by reading them.
+    fn count_units(&self) -> Option<usize> {
+        None
+    }
+
+    /// How many units from the first hold the first `n_records` records, or `None` when that is
+    /// only known by reading them.
+    fn count_units_for(&self, n_records: usize) -> Option<usize> {
+        let _ = n_records;
+        None
+    }
+}
+
+/// What one source of a chain hands the next.
+#[derive(Clone)]
+pub enum Bytes {
+    /// Bytes read by offset.
+    At(Arc<dyn ReadAt>),
+    /// Records read a unit at a time.
+    Records(Arc<dyn Records>),
+}
+
+/// One step of a chain: a way to open a URL, to wrap what came before into something else, or to
+/// read it into a `LazyFrame`.
 ///
 /// A source implements the steps it performs and leaves the others at their defaults, which are
 /// errors. What string named the bytes and where they come from are the plugin's business, so a
 /// source reads a local file, a remote object and the decompressed form of either alike. The
 /// options are bytes whose meaning is the implementation's own contract; the plugin passes them
 /// through untouched.
+///
+/// Nothing is read when a step is called beyond what settling the schema takes: what the query
+/// asks for arrives when the frame is collected, at the last source, which passes it down as the
+/// units it reads from [`Records`] or as the ranges it reads from a [`ReadAt`].
 pub trait ScanSource: Send + Sync {
     /// The registered name, matched against `--format` and the keys of `--opts`.
     fn name(&self) -> &'static str;
@@ -53,9 +91,9 @@ pub trait ScanSource: Send + Sync {
         polars_bail!(ComputeError: "`{}` does not open a URL", self.name())
     }
 
-    /// Turns `source` into other bytes, such as its decompressed form. Called when this source
-    /// is in the middle of a chain.
-    fn wrap(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>> {
+    /// Turns `source` into something else, such as the records it decompresses to. Called when
+    /// this source is in the middle of a chain.
+    fn wrap(&self, source: Bytes, opts: &[u8]) -> PolarsResult<Bytes> {
         let _ = (source, opts);
         polars_bail!(
             ComputeError:
@@ -65,7 +103,7 @@ pub trait ScanSource: Send + Sync {
 
     /// Builds a `LazyFrame` over `source` without collecting it. Called when this source ends a
     /// chain.
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let _ = (source, opts);
         polars_bail!(
             ComputeError:

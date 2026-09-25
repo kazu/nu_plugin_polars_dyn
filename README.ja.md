@@ -111,15 +111,22 @@ offset 付きの `slice` が読み込みに効かない)は [docs/custom_build.m
 
 [`seekzstdsep-scan/`](./seekzstdsep-scan/) と [`ssh-scan/`](./ssh-scan/) はそのまま組み込める
 scan source です。前者は [seekzstdsep][] が書く seekable zstd のファイル(`.seek.zst`)を展開後の
-バイト列として次の段に渡し、後者は `ssh://[user@]host/path` を sftp で開きます。どちらも
+レコード列として次の段に渡し、後者は `ssh://[user@]host/path` を sftp で開きます。どちらも
 built-in の csv / ndjson / parquet / ipc と、他の crate のフォーマットの前に付きます。
+`polars_dyn first 10` のような問い合わせは、先頭のレコードを含む frame だけを展開して読みます。
 
 ```nu
 seekzstdsep compress events.jsonl   # -> events.jsonl.seek.zst
 nu-polars-dyn-build seekzstdsep_scan ssh_scan --path seekzstdsep_scan=./seekzstdsep-scan --path ssh_scan=./ssh-scan
 polars_dyn open events.jsonl.seek.zst | polars_dyn collect
+polars_dyn open events.jsonl.seek.zst --opts {seek-zst: {record_filter: "error"}} | polars_dyn collect
 polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 2222}} | polars_dyn collect
 ```
+
+`seek-zst` の `--opts` は `{finder, finder_arg, verify_frames, record_filter}` です。`finder` /
+`finder_arg` はレコードの区切りで、seekzstdsep の `--finder` / `--finder-arg` と同じ値を取ります
+(デフォルトは改行)。`verify_frames`(デフォルト true)は frame ごとのレコード数を検査します。
+`record_filter` は、パースの前にその文字列を含むレコードだけを残します。
 
 `.seek.zst` は、追記され続けるテキストログをログのまま置いたまま polars で読むためにあります。
 ディスクは圧縮率のぶん減り、読む速度は素のファイルとおおむね同等です。分析だけが目的の
@@ -127,7 +134,8 @@ polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 222
 `identity` が無ければ ssh-agent で認証します。
 
 logfmt のログは [polars-logfmt][] の `logfmt-scan` が `.logfmt` の段になります(別 repo。
-`--path logfmt_scan=<polars-logfmt の checkout>/logfmt-scan` で組み込む)。
+`--path logfmt_scan=<polars-logfmt の checkout>/logfmt-scan` で組み込む)。`.logfmt` と
+`ssh://…/x.logfmt` は読めますが、`.logfmt.seek.zst` は読めません。
 
 ## ディレクトリ構成
 

@@ -1,18 +1,22 @@
-//! Reading a text format from bytes in newline-cut chunks.
+//! Reading a text format from bytes or records in chunks of whole lines.
 //!
-//! The bytes are cut into chunks of about `chunk_size`, each cut moved forward to the next
-//! newline so a chunk holds whole lines, and the chunks are read in parallel by a
-//! [`ChunkParser`] — whichever polars reader already knows the text format — and concatenated.
-//! The bytes are a [`ReadAt`], so this reads a local file, a remote object and the decompressed
-//! form of either the same way; nothing about where the chunks come from is known here, which is
-//! also why a chunk that straddles two frames of a compressed source is read as it is.
+//! Bytes read by offset are cut into chunks of about `chunk_size`, each cut moved forward to the
+//! next newline so a chunk holds whole lines; records come in units of whole records, and each
+//! unit is a chunk. The chunks are read in parallel by a [`ChunkParser`] — whichever polars reader
+//! already knows the text format — and concatenated. Nothing about where the bytes come from is
+//! known here, so a local file, a remote object and the decompressed records of either are read
+//! the same way.
 //!
-//! A cut is made at any newline: nothing here knows the format's quoting, so a newline inside a
-//! quoted csv field is a cut like any other when it is the first one past a `chunk_size` boundary,
-//! and the two halves are then parsed as records, which the parser refuses or misreads. A source
-//! whose records hold newlines is read whole with a `chunk_size` at least its length.
+//! A cut in bytes is made at any newline: nothing here knows the format's quoting, so a newline
+//! inside a quoted csv field is a cut like any other when it is the first one past a `chunk_size`
+//! boundary, and the two halves are then parsed as records, which the parser refuses or misreads.
+//! A source whose records hold newlines is read whole with a `chunk_size` at least its length.
+//! Records are taken as they end, so a record source that does not end them with a newline gives
+//! the parser lines it does not know.
 //!
-//! Two pushdowns polars gives its own scans are missing, since this is an `AnonymousScan`:
+//! Nothing but the first chunk is read before the frame is collected. What the query asks for
+//! arrives then, and two pushdowns polars gives its own scans are missing, since this is an
+//! `AnonymousScan`:
 //!
 //! - A slice with a non-zero offset is not pushed into an anonymous scan at all, so `slice 1000 10`
 //!   arrives as no slice: the bytes are read whole and the plan takes the ten rows from it. Nothing
@@ -20,9 +24,10 @@
 //! - `collect --streaming` fails, since polars-stream does not run anonymous scans.
 //!
 //! `n_rows`, the projection and the predicate all arrive. `n_rows` counts rows of the source, so it
-//! is taken first and the other two are applied to what it leaves; without it each chunk is
-//! narrowed as it is read, so the concatenation never holds rows that were dropped. The dynamic
-//! bound that `sort` followed by `slice` produces is the one thing not applied; see
+//! is taken first and the other two are applied to what it leaves; it also bounds what is asked of
+//! the source, which is cut, or read a unit at a time, only as far as the rows run. Without it each
+//! chunk is narrowed as it is read, so the concatenation never holds rows that were dropped. The
+//! dynamic bound that `sort` followed by `slice` produces is the one thing not applied; see
 //! `evaluable_part`.
 //!
 //! The schema is settled from the first chunk alone, since the chunks are read at once and have to
@@ -31,6 +36,7 @@
 //! further than it does. Where that matters, pass the schema in `--opts`.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use polars::prelude::{
     AnonymousScan, AnonymousScanArgs, DataFrame, Expr, IntoLazy, LazyFrame, Operator, PolarsError,
@@ -41,6 +47,7 @@ use polars_core::utils::accumulate_dataframes_vertical;
 use rayon::prelude::*;
 
 use super::read_at::{ReadAt, read_fully};
+use super::{Bytes, Records};
 
 /// How many bytes a cut looks ahead for a newline at a time.
 const PROBE: usize = 8 * 1024;
@@ -54,38 +61,39 @@ pub trait ChunkParser: Send + Sync {
     /// The schema to read the whole source with, inferred from the first chunk.
     fn schema(&self, chunk: &[u8]) -> PolarsResult<SchemaRef>;
 
-    /// Reads one chunk. `index` is its position in the source, which a format with a header line
-    /// uses to read that line in chunk 0 only.
+    /// Reads one chunk. `index` is its position among the chunks, counted from the one the schema
+    /// was inferred from, which a format with a header line uses to read that line in chunk 0 only.
     fn parse(&self, chunk: &[u8], index: usize, schema: &SchemaRef) -> PolarsResult<DataFrame>;
 }
 
-/// A source read through `parser` in chunks cut at newlines.
+/// A source read through `parser` in chunks of whole lines.
 pub struct ChunkedScan {
-    source: Arc<dyn ReadAt>,
+    source: Bytes,
     parser: Box<dyn ChunkParser>,
-    /// The byte ranges of the chunks, each starting at 0 or just after a newline and ending at
-    /// the source's end or just after a newline.
-    chunks: Vec<(u64, u64)>,
+    chunk_size: usize,
+    /// The unit of records the first chunk is: the first one holding a record, which is where a
+    /// header line is. Always 0 for bytes.
+    first_unit: usize,
 }
 
 impl ChunkedScan {
-    /// Builds the `LazyFrame`, cutting `source` into chunks of about `chunk_size` bytes and
-    /// inferring the schema from the first.
+    /// Builds the `LazyFrame` over chunks of about `chunk_size` bytes, inferring the schema from
+    /// the first.
     ///
-    /// Reads that one chunk now, and probes the source for the cuts; the rest is left until the
-    /// frame is collected.
+    /// Reads that one chunk now; the rest is left until the frame is collected.
     pub fn lazy_frame(
-        source: Arc<dyn ReadAt>,
+        source: Bytes,
         parser: Box<dyn ChunkParser>,
         chunk_size: usize,
     ) -> PolarsResult<LazyFrame> {
-        let chunks = cut_chunks(&*source, chunk_size)?;
         let scan = ChunkedScan {
             source,
             parser,
-            chunks,
+            chunk_size: chunk_size.max(1),
+            first_unit: 0,
         };
-        let schema = scan.infer_schema()?;
+        let (schema, first_unit) = scan.infer_schema()?;
+        let scan = ChunkedScan { first_unit, ..scan };
         LazyFrame::anonymous_scan(
             Arc::new(scan),
             ScanArgsAnonymous {
@@ -95,28 +103,187 @@ impl ChunkedScan {
         )
     }
 
-    fn infer_schema(&self) -> PolarsResult<SchemaRef> {
+    /// The schema inferred from the first chunk, and for records the unit that chunk is.
+    fn infer_schema(&self) -> PolarsResult<(SchemaRef, usize)> {
         let mut buf = Vec::new();
-        self.read_chunk(&mut buf, 0)?;
-        self.parser.schema(&buf)
+        let mut first = 0;
+        match &self.source {
+            Bytes::At(source) => {
+                let len = source.len().map_err(|e| error(e.to_string()))?;
+                let end = next_cut(&**source, 0, self.chunk_size, len)?;
+                read_chunk(&**source, &mut buf, 0, (0, end))?;
+            }
+            Bytes::Records(records) => {
+                while records.read_unit(first, &mut buf)? && buf.is_empty() {
+                    first += 1;
+                }
+            }
+        }
+        Ok((self.parser.schema(&buf)?, first))
     }
 
-    /// Reads chunk `index` into `buf`, which is emptied first, so a thread reading many chunks
-    /// allocates once and then reuses the capacity.
-    fn read_chunk(&self, buf: &mut Vec<u8>, index: usize) -> PolarsResult<()> {
-        let (start, end) = self.chunks[index];
-        let len = usize::try_from(end - start).map_err(|e| error(e.to_string()))?;
-        buf.clear();
-        buf.resize(len, 0);
-        let read = read_fully(&*self.source, start, buf).map_err(|e| error(e.to_string()))?;
-        if read != len {
-            polars_bail!(
-                ComputeError:
-                "chunk {index}: the source ended after {read} of {len} bytes"
-            )
+    /// The frames of the chunks of `source` up to `n_rows`: all of them, cut up front and read
+    /// at once, without one, and else a batch at a time, cut only as far as the batch reaches.
+    fn frames_at(
+        &self,
+        source: &dyn ReadAt,
+        args: &AnonymousScanArgs,
+    ) -> PolarsResult<Vec<DataFrame>> {
+        let Some(n_rows) = args.n_rows else {
+            let chunks = cut_chunks(source, self.chunk_size)?;
+            return self.parse_each(
+                chunks.into_iter().enumerate().collect(),
+                args,
+                |buf, i, r| {
+                    read_chunk(source, buf, i, r)?;
+                    self.parser.parse(buf, i, &args.schema)
+                },
+            );
+        };
+
+        let len = source.len().map_err(|e| error(e.to_string()))?;
+        let mut frames = Vec::new();
+        let (mut rows, mut start, mut index) = (0, 0, 0);
+        while start < len || index == 0 {
+            let mut batch = Vec::new();
+            while batch.len() < batch_chunks() && (start < len || index == 0) {
+                let end = next_cut(source, start, self.chunk_size, len)?;
+                batch.push((index, (start, end)));
+                (start, index) = (end, index + 1);
+            }
+            let parsed = self.parse_each(batch, args, |buf, i, r| {
+                read_chunk(source, buf, i, r)?;
+                self.parser.parse(buf, i, &args.schema)
+            })?;
+            rows += parsed.iter().map(DataFrame::height).sum::<usize>();
+            frames.extend(parsed);
+            if rows >= n_rows {
+                break;
+            }
         }
-        Ok(())
+        Ok(frames)
     }
+
+    /// The frames of the units of `records`, as many at a time as there are threads, stopping once
+    /// the rows in the order of the units reach `n_rows`.
+    ///
+    /// Without an `n_rows` all the units are read at once when `records` knows how many there are.
+    /// With one, the first read takes the units `records` says the first `n_rows` records are in,
+    /// and the reads after it take a batch at a time: a record need not be a row — the header line
+    /// of a csv is not, nor is a blank line — so those units may still fall short. A unit holding
+    /// no record is an empty frame, and one past the last ends the reads.
+    fn frames_of_records(
+        &self,
+        records: &dyn Records,
+        args: &AnonymousScanArgs,
+    ) -> PolarsResult<Vec<DataFrame>> {
+        let count = records.count_units();
+        let first = match args.n_rows {
+            Some(n) => records
+                .count_units_for(n)
+                .unwrap_or_else(batch_chunks)
+                .max(1),
+            None => count.unwrap_or_else(batch_chunks),
+        };
+        let past_end = AtomicBool::new(false);
+        let empty = || DataFrame::empty_with_schema(&args.schema);
+        let mut frames = Vec::new();
+        let (mut rows, mut next) = (0, 0);
+        loop {
+            let wanted = if next == 0 { first } else { batch_chunks() };
+            let end = count.map_or(next + wanted, |count| (next + wanted).min(count));
+            if end <= next {
+                break;
+            }
+            let parsed = self.parse_each(
+                (next..end).map(|i| (i, ())).collect(),
+                args,
+                |buf, i, ()| {
+                    buf.clear();
+                    if !records.read_unit(i, buf)? {
+                        past_end.store(true, Ordering::Relaxed);
+                        return Ok(empty());
+                    }
+                    if buf.is_empty() {
+                        return Ok(empty());
+                    }
+                    self.parser
+                        .parse(buf, i.saturating_sub(self.first_unit), &args.schema)
+                },
+            )?;
+            rows += parsed.iter().map(DataFrame::height).sum::<usize>();
+            frames.extend(parsed);
+            next = end;
+            if past_end.load(Ordering::Relaxed) || args.n_rows.is_some_and(|n| rows >= n) {
+                break;
+            }
+        }
+        if frames.is_empty() {
+            frames.push(match args.n_rows {
+                Some(_) => empty(),
+                None => narrow(empty(), args)?,
+            });
+        }
+        Ok(frames)
+    }
+
+    /// Parses `chunks` in parallel through `parse`, which is handed a buffer of its thread's to
+    /// read into, and narrows each result unless an `n_rows` has to count its rows first.
+    fn parse_each<T: Send>(
+        &self,
+        chunks: Vec<(usize, T)>,
+        args: &AnonymousScanArgs,
+        parse: impl Fn(&mut Vec<u8>, usize, T) -> PolarsResult<DataFrame> + Sync,
+    ) -> PolarsResult<Vec<DataFrame>> {
+        THREAD_POOL.install(|| {
+            chunks
+                .into_par_iter()
+                .map_init(Vec::new, |buf, (index, chunk)| {
+                    let df = parse(buf, index, chunk)?;
+                    match args.n_rows {
+                        Some(_) => Ok(df),
+                        None => narrow(df, args),
+                    }
+                })
+                .collect()
+        })
+    }
+}
+
+/// How many chunks are read at once while `n_rows` is being counted: one per thread.
+fn batch_chunks() -> usize {
+    THREAD_POOL.current_num_threads().max(1)
+}
+
+/// Reads the chunk at `range` into `buf`, which is emptied first, so a thread reading many chunks
+/// allocates once and then reuses the capacity.
+fn read_chunk(
+    source: &dyn ReadAt,
+    buf: &mut Vec<u8>,
+    index: usize,
+    (start, end): (u64, u64),
+) -> PolarsResult<()> {
+    let len = usize::try_from(end - start).map_err(|e| error(e.to_string()))?;
+    buf.clear();
+    buf.resize(len, 0);
+    let read = read_fully(source, start, buf).map_err(|e| error(e.to_string()))?;
+    if read != len {
+        polars_bail!(
+            ComputeError:
+            "chunk {index}: the source ended after {read} of {len} bytes"
+        )
+    }
+    Ok(())
+}
+
+/// The end of the chunk that starts at `start`: just after the first newline at or after
+/// `start + chunk_size`, or `len` when there is none or that is past the end.
+fn next_cut(source: &dyn ReadAt, start: u64, chunk_size: usize, len: u64) -> PolarsResult<u64> {
+    let target = start.saturating_add(chunk_size as u64);
+    if target >= len {
+        return Ok(len);
+    }
+    Ok(next_line_start(source, target, len)?.unwrap_or(len))
 }
 
 /// The byte ranges of the chunks of `source`: cuts every `chunk_size` bytes, each moved forward
@@ -125,7 +292,7 @@ impl ChunkedScan {
 /// chunk after it.
 fn cut_chunks(source: &dyn ReadAt, chunk_size: usize) -> PolarsResult<Vec<(u64, u64)>> {
     let len = source.len().map_err(|e| error(e.to_string()))?;
-    let chunk_size = chunk_size.max(1) as u64;
+    let chunk_size = chunk_size as u64;
     let targets: Vec<u64> = (1..)
         .map(|k| k * chunk_size)
         .take_while(|&target| target < len)
@@ -177,7 +344,7 @@ impl AnonymousScan for ChunkedScan {
     }
 
     fn schema(&self, _infer_schema_length: Option<usize>) -> PolarsResult<SchemaRef> {
-        self.infer_schema()
+        self.infer_schema().map(|(schema, _)| schema)
     }
 
     fn allows_projection_pushdown(&self) -> bool {
@@ -197,41 +364,13 @@ impl AnonymousScan for ChunkedScan {
     /// `n_rows` counts the rows of the source, not of the answer, so it is applied before the
     /// predicate: `slice 0 26 | filter ...` asks for the matches among the first 26 rows. How many
     /// rows a chunk holds is only known once it is read, so it stops a batch of chunks at a time
-    /// rather than picking the last chunk it needs up front. Without an `n_rows` the whole source
-    /// is a single batch, which leaves rayon the most room to balance the work, and each chunk is
+    /// rather than picking the last chunk it needs up front. Without an `n_rows` each chunk is
     /// narrowed as it is read so the concatenation never holds the rows that were dropped.
     fn scan(&self, args: AnonymousScanArgs) -> PolarsResult<DataFrame> {
-        let chunk_count = self.chunks.len();
-        let (batch_chunks, narrow_per_chunk) = match args.n_rows {
-            Some(_) => (THREAD_POOL.current_num_threads().max(1), false),
-            None => (chunk_count, true),
+        let frames = match &self.source {
+            Bytes::At(source) => self.frames_at(&**source, &args)?,
+            Bytes::Records(records) => self.frames_of_records(&**records, &args)?,
         };
-
-        let mut frames = Vec::new();
-        let mut rows = 0;
-        for start in (0..chunk_count).step_by(batch_chunks) {
-            let end = start.saturating_add(batch_chunks).min(chunk_count);
-            let parsed = THREAD_POOL.install(|| {
-                (start..end)
-                    .into_par_iter()
-                    .map_init(Vec::new, |buf, index| {
-                        self.read_chunk(buf, index)?;
-                        let df = self.parser.parse(buf, index, &args.schema)?;
-                        if narrow_per_chunk {
-                            narrow(df, &args)
-                        } else {
-                            Ok(df)
-                        }
-                    })
-                    .collect::<PolarsResult<Vec<_>>>()
-            })?;
-            rows += parsed.iter().map(DataFrame::height).sum::<usize>();
-            frames.extend(parsed);
-            if args.n_rows.is_some_and(|n| rows >= n) {
-                break;
-            }
-        }
-
         let df = accumulate_dataframes_vertical(frames)?;
         match args.n_rows {
             Some(n) => narrow(df.head(Some(n)), &args),
