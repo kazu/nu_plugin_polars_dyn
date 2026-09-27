@@ -426,10 +426,12 @@ registry の設計とそのまま噛み合う(`events.jsonl.seek.zst` → `file`
 4. **frame は並列に展開する。** chunk 層がスレッドごとに別の frame を頼み、展開とパースを同じ
    スレッドで続けて行う。
 5. `.logfmt.seek.zst` も同じ層で、`file`, `seek-zst`, `logfmt` の chain になる。logfmt-scan は
-   `.seek.zst` を自前で持たない。ただし logfmt-scan は `Bytes::At` だけを今までどおり読み、
-   `Records` はエラーにする(kazu 判断)。polars-logfmt の frame 並列の読みは offset で読める
-   source を前提にしていて、塊を読ませる形は別に設計が要るため。そのため `.logfmt.seek.zst` は
-   読めない。API が変わるので plugin は 0.4.0 に上げ、logfmt-scan は `0.4` に依存する。
+   `.seek.zst` を自前で持たない。logfmt-scan は `Bytes::At` を今までどおり offset で読み、
+   `Records` は単位の番号で `read_unit` を頼んで polars-logfmt に渡す(polars-logfmt の
+   `from_units`)。polars-logfmt は単位の数が分かれば単位を並列の読みの frame にし、分からないときと、
+   並列の読みが結果を出さないとき(`aligned_cols_cnt` が無いとき)は番号順に続けて読む。plain の
+   `.logfmt` が 4 MiB の範囲を frame にするのと同じ規則で読まれる。API が変わるので
+   plugin は 0.4.0 に上げ、logfmt-scan は `0.4` に依存する。
 
 採らなかった案: 汎用の frame 層を `seekzstdsep` の隣の crate として publish し、logfmt と
 fork の両方から使う。chain にすれば frame 層は 1 つの `wrap` で、パーサ側は圧縮を知らずに済む。
