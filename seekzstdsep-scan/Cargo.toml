@@ -2,7 +2,7 @@
 name = "seekzstdsep_scan"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95.0"
+rust-version = "1.96.1"
 license = "MIT"
 description = "The seekable zstd (.seek.zst) scan source for nu_plugin_polars_dyn: a compressed file as the bytes it decompresses to."
 repository = "https://github.com/kazu/nu_plugin_polars_dyn"

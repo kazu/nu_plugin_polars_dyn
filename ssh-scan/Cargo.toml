@@ -2,7 +2,7 @@
 name = "ssh_scan"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95.0"
+rust-version = "1.96.1"
 license = "MIT"
 description = "The ssh:// scan source for nu_plugin_polars_dyn: a remote file over sftp as the bytes a chain reads."
 repository = "https://github.com/kazu/nu_plugin_polars_dyn"
