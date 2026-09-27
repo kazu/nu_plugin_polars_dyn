@@ -12,7 +12,7 @@ bench = false
 
 [dependencies]
 memchr = "=2.8.3"
-nu_plugin_polars_dyn = { version = "=0.4.0", path = ".." }
+nu_plugin_polars_dyn = { version = "=0.4.1", path = ".." }
 polars = { version = "=0.55.2", features = ["lazy"] }
 seekzstdsep = "=0.9.0"
 serde = { version = "=1.0.229", features = ["derive"] }
