@@ -12,7 +12,7 @@ No Python anywhere.
 
 | nushell | polars |
 | --- | --- |
-| 0.114.1 | 0.55.2 |
+| 0.116.0 | 0.55.2 |
 
 ## Table of contents
 

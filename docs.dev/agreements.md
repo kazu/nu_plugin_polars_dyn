@@ -271,18 +271,21 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 - **crates.io に publish する**(他の人が `cargo install` で入れられるように)。crate 名は
   nu plugin の慣習どおりバイナリ名と同じ `nu_plugin_polars_dyn`(crates.io で空き確認済)。
-  `version` は `0.1.0` から、`edition = "2024"`、`rust-version = "1.95.0"`、`license = "MIT"`
+  `version` は `0.1.0` から、`edition = "2024"`、`rust-version = "1.96.1"`、`license = "MIT"`
   (本家の LICENSE は残す)、`authors` と `repository` は kazu のもの。
 - publish する manifest には path / git 依存を置けない(cargo が版の無い依存を拒む)ので、
   logfmt のような非公開の scan source は published crate に入れない。registry は静的配列では
   なく **`PolarsPlugin` 構築時に bin が渡す**形にして、published バイナリは built-in だけを、
   `nu-polars-dyn-build` が生成するバイナリは built-in + 利用者の crate を渡す。
   生成 project は published manifest ではないので path / git 依存を置ける。
-- `workspace = true` は nushell 0.114.1 の root の実値で置き換える。nu 系は crates.io の
-  `=0.114.1`(`nu-protocol` / `nu-plugin` / `nu-path` / `nu-utils`、dev の `nu-cmd-lang` /
+- `workspace = true` は nushell 0.116.0 の root の実値で置き換える。nu 系は crates.io の
+  `=0.116.0`(`nu-protocol` / `nu-plugin` / `nu-path`、dev の `nu-cmd-lang` /
   `nu-engine` / `nu-parser` / `nu-command` / `nu-plugin-test-support`)。feature は本家の
-  指定どおり(`os`、dev 側は `plugin`)。その他は `chrono 0.4.42`(default-features 無し +
-  `unstable-locales`)、`fancy-regex 0.18`、`log 0.4`、`url 2.5`、`tempfile 3.27`。
+  指定どおりで、nu 系は `default-features = false`(`nu-plugin` は `local-socket`、dev 側は `plugin`)。
+  dev の `nu-plugin-test-support` だけは `local-socket` を足す。本家は同じ workspace の nushell 本体が
+  `nu-plugin-engine` の `local-socket` を立てるので揃うが、単独の crate では `nu-plugin` と食い違って
+  `nu-plugin-engine` がコンパイルできない。その他は `chrono 0.4.45`(default-features 無し +
+  `unstable-locales`)、`fancy-regex 0.19`、`log 0.4.34`、`tempfile 3.27`。
   `tokio` の直接依存は cloud 認証層と一緒に消える(polars が内部で持つ分は残る)。
 - `Cargo.lock` を commit する。`CARGO_TARGET_DIR` は repo に書かずセッションの env で渡す。
 - `polars-lazy` に feature `ffi_plugin` を付ける(facade の `polars` にはこの feature が無い)。
