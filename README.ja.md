@@ -134,8 +134,8 @@ polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 222
 `identity` が無ければ ssh-agent で認証します。
 
 logfmt のログは [polars-logfmt][] の `logfmt-scan` が `.logfmt` の段になります(別 repo。
-`--path logfmt_scan=<polars-logfmt の checkout>/logfmt-scan` で組み込む)。`.logfmt` と
-`ssh://…/x.logfmt` は読めますが、`.logfmt.seek.zst` は読めません。
+`--path logfmt_scan=<polars-logfmt の checkout>/logfmt-scan` で組み込む)。`.logfmt`、
+`ssh://…/x.logfmt`、`.logfmt.seek.zst` を読めます。
 
 ## ディレクトリ構成
 

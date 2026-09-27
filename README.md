@@ -139,7 +139,7 @@ exists to be analysed and nothing else, parquet beats it on every axis. `ssh` ta
 
 logfmt logs are read by `logfmt-scan` of [polars-logfmt][], the `.logfmt` step, which lives in that
 repository (build it in with `--path logfmt_scan=<polars-logfmt checkout>/logfmt-scan`). It reads
-`.logfmt` and `ssh://…/x.logfmt`, but not `.logfmt.seek.zst`.
+`.logfmt`, `ssh://…/x.logfmt` and `.logfmt.seek.zst`.
 
 ## Repository layout
 
