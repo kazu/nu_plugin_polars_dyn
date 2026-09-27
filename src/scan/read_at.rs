@@ -64,7 +64,7 @@ pub fn read_fully(source: &dyn ReadAt, offset: u64, buf: &mut [u8]) -> io::Resul
 /// `Read + Seek` over a shared [`ReadAt`], with a position of its own.
 ///
 /// For a library that wants a reader rather than offsets: every thread holds one over the one
-/// handle. It is what the `.seek.zst` scan hands zeekstd and what logfmt-scan hands polars-logfmt.
+/// handle. It is what the `.seek.zst` scan hands seekzstdsep and what logfmt-scan hands polars-logfmt.
 ///
 /// ```
 /// # fn main() -> std::io::Result<()> {

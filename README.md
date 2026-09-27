@@ -114,15 +114,23 @@ a `slice` with an offset does not reach the read) are in
 
 [`seekzstdsep-scan/`](./seekzstdsep-scan/) and [`ssh-scan/`](./ssh-scan/) are scan sources you can
 build in as they are. The first hands the seekable zstd files [seekzstdsep][] writes (`.seek.zst`)
-to the next step as the bytes they decompress to; the second opens `ssh://[user@]host/path` over
+to the next step as the records they decompress to; the second opens `ssh://[user@]host/path` over
 sftp. Both go in front of the built-in csv / ndjson / parquet / ipc and of any other crate's format.
+A query such as `polars_dyn first 10` decompresses and reads only the frames holding the first
+records.
 
 ```nu
 seekzstdsep compress events.jsonl   # -> events.jsonl.seek.zst
 nu-polars-dyn-build seekzstdsep_scan ssh_scan --path seekzstdsep_scan=./seekzstdsep-scan --path ssh_scan=./ssh-scan
 polars_dyn open events.jsonl.seek.zst | polars_dyn collect
+polars_dyn open events.jsonl.seek.zst --opts {seek-zst: {record_filter: "error"}} | polars_dyn collect
 polars_dyn open ssh://host/var/log/events.jsonl.seek.zst --opts {ssh: {port: 2222}} | polars_dyn collect
 ```
+
+`seek-zst` takes `{finder, finder_arg, verify_frames, record_filter}` in `--opts`. `finder` and
+`finder_arg` say where a record ends, with the values of seekzstdsep's `--finder` and
+`--finder-arg` (a newline by default). `verify_frames` (default true) checks the record count of
+every frame. `record_filter` keeps only the records holding that string, before they are parsed.
 
 `.seek.zst` is there to keep an appended text log as a log and still read it with polars. The disk
 drops by the compression ratio and reading costs about what the plain file costs. If the file
@@ -130,7 +138,8 @@ exists to be analysed and nothing else, parquet beats it on every axis. `ssh` ta
 `{port, identity}` in `--opts` and authenticates through ssh-agent when `identity` is not given.
 
 logfmt logs are read by `logfmt-scan` of [polars-logfmt][], the `.logfmt` step, which lives in that
-repository (build it in with `--path logfmt_scan=<polars-logfmt checkout>/logfmt-scan`).
+repository (build it in with `--path logfmt_scan=<polars-logfmt checkout>/logfmt-scan`). It reads
+`.logfmt` and `ssh://…/x.logfmt`, but not `.logfmt.seek.zst`.
 
 ## Repository layout
 

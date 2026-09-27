@@ -11,7 +11,7 @@ use crate::{
     PolarsPlugin,
     command::core::resource::Resource,
     nu_serde::to_serde_value,
-    scan::{Chain, ScanSource, url_scheme},
+    scan::{Bytes, Chain, ScanSource, url_scheme},
     values::{CustomValueSupport, NuLazyFrame, PolarsPluginType},
 };
 
@@ -149,6 +149,7 @@ fn run_chain(
     let mut bytes = chain
         .head
         .open(source, opts_of(chain.head))
+        .map(Bytes::At)
         .map_err(|e| scan_error(chain.head, e))?;
     for scan in &chain.middle {
         bytes = scan

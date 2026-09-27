@@ -40,9 +40,9 @@ pub trait ScanSource: Send + Sync {
     fn name(&self) -> &'static str;
     fn suffixes(&self) -> &'static [&'static str];
     fn schemes(&self) -> &'static [&'static str] { &[] }
-    fn open(&self, url: &str, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>>;      // default: error
-    fn wrap(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>>; // default: error
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame>;     // default: error
+    fn open(&self, url: &str, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>>; // default: error
+    fn wrap(&self, source: Bytes, opts: &[u8]) -> PolarsResult<Bytes>;       // default: error
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame>;   // default: error
 }
 ```
 
@@ -51,9 +51,15 @@ A source string is resolved into a **chain** of these (the rules are under
 `open`; each suffix picks one more, and every one but the last is asked to `wrap`, the last to
 `scan`. A source implements the one or two of the three it does and leaves the rest at their
 defaults. It never learns what comes before or after it: `open` gets the string, `wrap` and `scan`
-get bytes, and what those bytes are — a local file, an sftp handle, a decompressed stream — is
-not its business. That is what lets an `ssh` you write feed a `seek-zst` somebody else wrote feed
-the built-in `ndjson`.
+get [`Bytes`](#22-what-passes-between-sources), and where those come from — a local file, an sftp
+handle, a decompressed stream — is not its business. That is what lets an `ssh` you write feed a
+`seek-zst` somebody else wrote feed the built-in `ndjson`.
+
+What the query asks for — the first `n` rows, the columns, the filter — reaches every source of
+the chain, when the frame is collected. The last source gets it from polars and reads only the
+units of records it needs from the one before it, and that one reads only the bytes those units
+take from the first. So until then a source only opens: it reads nothing but what settling the
+schema takes.
 
 The implementing type is a `'static` value, usually a unit struct; the plugin holds a
 `&'static dyn ScanSource` to it for the life of the process and calls it from any thread, hence
@@ -93,39 +99,68 @@ The implementing type is a `'static` value, usually a unit struct; the plugin ho
   are still on it; parse what you need and ignore the rest.
 - `opts`: the value under this source's name in `--opts`, encoded as JSON, or an empty slice.
 - Requirements: return a handle that can be read by offset from several threads at once (see
-  [2.2](#22-the-trait-readat)). Return `Err` rather than panic for anything the input or the options
-  can cause. `ssh-scan/src/lib.rs` in this repository opens over sftp.
+  [2.2](#22-what-passes-between-sources)). Return `Err` rather than panic for anything the input or
+  the options can cause. `ssh-scan/src/lib.rs` in this repository opens over sftp.
 
 #### `wrap`
 
-- Called on a source in the middle of the chain: bytes in, bytes out. A decompressor, a container
-  format, a decryptor.
-- Requirements: the returned handle reads by offset into the *transformed* bytes, and its `len` is
-  their length. Reading ahead of what was asked is fine; caching is yours to decide.
-  `seekzstdsep-scan/src/seek_zst.rs` wraps a seekable zstd file into the bytes it decompresses to.
+- Called on a source in the middle of the chain. A decompressor, a container format, a
+  decryptor.
+- Requirements: return either bytes read by offset (`Bytes::At`) over the *transformed* bytes,
+  whose `len` is their length, or records (`Bytes::Records`) when the source knows where they end.
+  Reading ahead of what was asked is fine; caching is yours to decide. A source that cannot take
+  what it is handed returns `Err`. `seekzstdsep-scan/src/seek_zst.rs` wraps a seekable zstd file
+  into the records it decompresses to.
 
 #### `scan`
 
 - Called on the last source of the chain. Builds the `LazyFrame` and returns it. Nothing is read
   yet unless the source needs to (a schema, say); the rows are read when the frame is collected.
-- `source`: the bytes to read. The source does not learn the path, nor whether the bytes came
-  through a `wrap`.
+- `source`: the bytes or records to read. The source does not learn the path, nor whether they
+  came through a `wrap`. When polars hands the scan an `n_rows`, read the units of records in
+  order and stop once the rows are there.
 - `opts`: as for `open`. `parse_opts` turns it into a `serde_json::Map`, and `overlay_opts` lays it
   over a serde struct of defaults and refuses unknown keys. `no_opts` refuses everything, for a
   source that takes nothing.
 - Requirements: return `Err` rather than panic. The error text is shown to the user as
   `<name> scan error`, pointing at the source argument. Do not collect the frame.
 
-### 2.2 The trait `ReadAt`
+### 2.2 What passes between sources
 
-`nu_plugin_polars::scan::ReadAt`, the handle that passes between sources.
+`nu_plugin_polars::scan::Bytes`: bytes read by offset, or records read from the start.
 
 ```rust
+pub enum Bytes {
+    At(Arc<dyn ReadAt>),
+    Records(Arc<dyn Records>),
+}
+
 pub trait ReadAt: Send + Sync {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> io::Result<usize>;
     fn len(&self) -> io::Result<u64>;
 }
+
+pub trait Records: Send + Sync {
+    fn read_unit(&self, index: usize, dst: &mut Vec<u8>) -> PolarsResult<bool>;
+    fn count_units(&self) -> Option<usize> { None }
+    fn count_units_for(&self, n_records: usize) -> Option<usize> { None }
+}
 ```
+
+`Records`:
+
+- The records come in units, each read on its own by number: a frame of a compressed file, say.
+  `read_unit` appends unit `index` — whole records, each with the bytes that end it — to `dst` and
+  returns `false` when there is no such unit. The units in the order of their numbers are the
+  records in order, and any of them can be read from several threads at once, reading no more of
+  its own source than that unit takes.
+- `count_units` and `count_units_for(n)` say how many units there are and how many hold the first
+  `n` records, for a source that knows without reading; the defaults say it does not. The scan
+  reading the units counts the rows and decides where to stop.
+- The built-in csv and ndjson read records as lines, so a record source whose records do not end
+  with a newline suits only a scan that reads them some other way.
+
+`ReadAt`:
 
 - `read_at` reads from `offset` into `buf` and returns how many bytes were read. Fewer than
   `buf.len()` can come back before the end, and `0` means `offset` is at or past the end. Every
@@ -165,9 +200,7 @@ polars = "=0.55.2"
 ### 2.5 Example
 
 ```rust
-use std::sync::Arc;
-
-use nu_plugin_polars::scan::{ReadAt, ScanSource, parse_opts};
+use nu_plugin_polars::scan::{Bytes, ScanSource, parse_opts};
 use polars::prelude::{LazyFrame, PolarsResult};
 
 pub fn scan_sources() -> &'static [&'static dyn ScanSource] {
@@ -185,7 +218,7 @@ impl ScanSource for MyFormat {
         &[".myfmt"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
         let opts = parse_opts(opts)?; // serde_json::Map
         todo!()
     }
@@ -193,17 +226,16 @@ impl ScanSource for MyFormat {
 ```
 
 A minimal working implementation is `tests/rows_scan/src/lib.rs` in this repository. The three
-kinds of step each have a real one here: `ssh-scan/` opens, `seekzstdsep-scan/` wraps, and
-`logfmt-scan/` in [polars-logfmt](https://github.com/kazu/polars-logfmt) scans a real format.
+kinds of step that come from a crate each have a real one here: `ssh-scan/` opens and
+`seekzstdsep-scan/` wraps.
 
 ## 3. Build
 
-To compile in `seekzstdsep-scan` and `ssh-scan` from this repository and `logfmt-scan` from a
-checkout of polars-logfmt, so that `.seek.zst`, `ssh://` and `.logfmt` all work, in any
-combination:
+To compile in `seekzstdsep-scan` and `ssh-scan` from this repository, so that `.seek.zst` and
+`ssh://` both work, alone or together:
 
 ```nu
-nu-polars-dyn-build seekzstdsep_scan ssh_scan logfmt_scan --path seekzstdsep_scan=/path/to/nu_plugin_polars_dyn/seekzstdsep-scan --path ssh_scan=/path/to/nu_plugin_polars_dyn/ssh-scan --path logfmt_scan=/path/to/polars-logfmt/logfmt-scan --out ~/bin
+nu-polars-dyn-build seekzstdsep_scan ssh_scan --path seekzstdsep_scan=/path/to/nu_plugin_polars_dyn/seekzstdsep-scan --path ssh_scan=/path/to/nu_plugin_polars_dyn/ssh-scan --out ~/bin
 ```
 
 The general form is:

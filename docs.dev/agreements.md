@@ -49,7 +49,7 @@ Python 向けに作られた拡張の互換は副次的。
   もう片方が引けずクエリが黙って誤答した(task 010 の記録)。採らなかった案は
   自前 C ABI + Arrow C Data Interface(projection と predicate が `.so` に降りない)、
   別プロセス + Arrow IPC stream(同じく降りず、コピーとプロセス起動が乗る)。
-- registry の境界の入力は source のバイト列(`ReadAt`)とオプションの bytes に保つ。`--opts` の
+- registry の境界の入力は source のバイト列(`ReadAt`)かレコード列(`Records`)と、オプションの bytes に保つ。`--opts` の
   中身を nu 側で覗かない、という一点だけが理由で、FFI を越えるためではない。文字列を開くのは
   plugin 側の仕事(「`polars_dyn open` と registry」の節)。
 
@@ -60,8 +60,23 @@ polars_dyn open <source: string> [--format (-f) <a,b,c>] [--opts (-o) <record>] 
 ```
 
 source 文字列から **scan の列(chain)** を組み、scan どうしを `ReadAt`(offset 指定で読める
-バイト列)で繋ぐ。plugin は個々の scan が何と繋がるかを知らない。この API で作った scan は
-何と何でも繋がる(`ssh → seek-zst → ndjson`、`file → seek-zst → csv`、`file → parquet`)。
+バイト列)か `Records`(番号で読める単位ごとのレコードの塊)で繋ぐ。plugin は個々の scan が何と繋がるかを
+知らない。この API で作った scan は何と何でも繋がる(`ssh → seek-zst → ndjson`、
+`file → seek-zst → csv`、`file → parquet`)。
+
+- **クエリオプティマイザが決めた条件は chain の全 scan に届く。**polars が scan に条件を渡す口は
+  末尾の `AnonymousScan::scan(args)`(`n_rows`、projection、predicate)だけで、collect の時点で
+  来る。そこで chain の各層は `polars_dyn open` の時点では**開くだけ**にし(schema を決めるのに
+  先頭を読む分を除いて何も読まない)、条件は collect の時点で末尾から先頭へ、各層の言葉に
+  直して渡す:
+  - c(末尾)は `args` をそのまま受ける。projection と predicate は形式を知る c だけが評価できる
+    ので c で閉じる。`n_rows` は c が「どの単位まで読むか」に直して b に頼む(b が答えられるなら
+    `count_units_for(n)` で見積もり、足りなければ次の単位を頼む)。
+  - b(途中の `Records` を返す層)は `read_unit(index, ..)` で単位ごとに受け、頼まれた単位だけ
+    展開する。
+  - a(先頭)は b が `read_at` で要求するバイト範囲として受ける。読まれない範囲は読まない。
+    実際にどこまで絞れるかは a の実装次第。
+  特殊な実装(c が読む範囲を工夫して b の読みを間接に減らす等)に頼らず届くことが要件。
 
 - registry の境界は trait 1 つ。返り値は LazyFrame で、collect はしない。
 
@@ -71,6 +86,24 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
       fn len(&self) -> io::Result<u64>;   // seek.zst が末尾の seek table を読むのに要る
   }
 
+  /// レコードの境界を知る層が返す読み口。レコードを単位(seek-zst では frame)に分けて持ち、
+  /// 単位を番号で読ませる。`&self` なので複数のスレッドから同時に読める。
+  pub trait Records: Send + Sync {
+      /// 単位 `index` の塊(区切りまで含む完全なレコードを 0 個以上つないだもの)を `dst` に
+      /// 書き足す。単位が無ければ(番号が末尾を越えたら)false。番号順につなぐと元の順になる。
+      fn read_unit(&self, index: usize, dst: &mut Vec<u8>) -> PolarsResult<bool>;
+      /// 単位の数。読んでみないと分からないなら None(デフォルト)。
+      fn count_units(&self) -> Option<usize> { None }
+      /// 先頭から `n_records` 件を読むのに要る単位の数。答えられないなら None(デフォルト)。
+      fn count_units_for(&self, n_records: usize) -> Option<usize> { None }
+  }
+
+  /// 層の間を渡るもの。
+  pub enum Bytes {
+      At(Arc<dyn ReadAt>),
+      Records(Arc<dyn Records>),
+  }
+
   pub trait ScanSource: Send + Sync {
       fn name(&self) -> &'static str;                         // "seek-zst"
       fn suffixes(&self) -> &'static [&'static str];          // [".seek.zst"]
@@ -78,21 +111,30 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
       fn schemes(&self) -> &'static [&'static str] { &[] }    // ["ssh"]
       /// scheme で選ばれたとき、bytes 無しで呼ばれる。デフォルトはエラー。
       fn open(&self, url: &str, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>>;
-      /// chain の途中で呼ばれる: bytes を受けて bytes を返す。デフォルトはエラー。
-      fn wrap(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<Arc<dyn ReadAt>>;
-      /// chain の末尾で呼ばれる: bytes を frame にする。デフォルトはエラー。
-      fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame>;
+      /// chain の途中で呼ばれる: 受けたものを別の読み口にする。デフォルトはエラー。
+      fn wrap(&self, source: Bytes, opts: &[u8]) -> PolarsResult<Bytes>;
+      /// chain の末尾で呼ばれる: frame にする。デフォルトはエラー。
+      fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame>;
   }
   ```
 
   3 つの動作すべてにデフォルトがあるので、scan は自分がやることだけを書く(`seek-zst` は
-  `wrap` だけ、`ssh` は `open` だけ、`ndjson` は `scan` だけ)。016 の impl(`scan` だけ)は
-  無変更でコンパイルが通る。`ReadAt` は `&self` で読むので `Arc` で共有するだけで並列に使え、
-  S3 の range GET にそのまま写る。`File` の実装は unix の `FileExt::read_at`、Windows の
-  `FileExt::seek_read`。`Read + Seek` を要求する下流ライブラリには `scan::ReadAtCursor`
-  (`Arc<dyn ReadAt>` + 位置。thread ごとに 1 つ)でアダプトする。
+  `wrap` だけ、`ssh` は `open` だけ、`ndjson` は `scan` だけ)。`ReadAt` は `&self` で読むので
+  `Arc` で共有するだけで並列に使え、S3 の range GET にそのまま写る。`File` の実装は unix の
+  `FileExt::read_at`、Windows の `FileExt::seek_read`。`Read + Seek` を要求する下流ライブラリには
+  `scan::ReadAtCursor`(`Arc<dyn ReadAt>` + 位置。thread ごとに 1 つ)でアダプトする。
   参考にしたのは polars-logfmt の `SeekableVfsFile`(文字列の解決と読み口を分ける)だが、
   `Read + Seek` + `clone_handle` ではなく offset 指定の読みを境界にした。
+
+  `Records` を返すのはレコードの境界を知る層(`seek-zst`)で、境界の判定はその層の 1 か所に
+  置く。後ろの層は境界を探し直さない。単位は塊で渡すので、レコードごとの確保やコピーは境界に
+  現れない。並列の数は受け取る側が polars のスレッドプールの上で決める(スレッドの数だけ単位を
+  頼む)ので、API には持たない。件数を答えるのは答えられる作る側だけで、打ち切りは受け取る側が
+  単位の番号順に行数を足して決める(行数とレコード数は一致しないことがある: csv の見出し行、
+  空行、`record_filter`)。`record_filter` のように境界の後でレコードを落とす層が
+  あると、展開後の offset は元のファイルと対応しなくなるので、その先は `ReadAt` では渡せない。
+  受け取れない形が来たときは層ごとに決める: `wrap` で `ReadAt` を要る層(`seek-zst`)は
+  `Records` をエラーにし、parquet / ipc は `Records` を全部つないでバイト列にして読む。
 
 - **plugin の手順(これ以外を知らない)**:
   1. source に `<scheme>://` があればその scheme を持つ scan を先頭に、無ければ built-in の `file` を
@@ -111,7 +153,8 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
      0 件はエラー(``No file matches `data/*.jsonl` ``)。メタ文字が無ければ今と同じ 1 件。
      scheme 付きの source は展開しない。
      `AnonymousScan` には polars がパスの一覧を渡す欄が無いので、複数ファイルは plugin が持つ。
-  4. 3 の 1 件ずつに、先頭の `open(url)`、途中の `wrap(bytes)`、末尾の `scan(bytes)` を呼ぶ。
+  4. 3 の 1 件ずつに、先頭の `open(url)`、途中の `wrap(source)`、末尾の `scan(source)` を呼ぶ
+     (先頭の `ReadAt` は `Bytes::At` に包んで次へ渡す)。
      末尾が `scan` を持たなければその scan のデフォルトのエラー(`./x.seek.zst` は `seek-zst` が
      frame を返せない)。得た LazyFrame は polars の `concat`(縦、デフォルトの `UnionArgs`)で
      1 つにし、1 件ならそのまま返す。列の揃わないファイルは collect のときに `concat` のエラーになる。
@@ -135,10 +178,10 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
   | `file` | scheme `file` / scheme 無し | 無し | bytes | plugin |
   | `ssh` | scheme `ssh` | 無し | bytes(sftp) | `ssh-scan/` |
   | `s3` | scheme `s3` | 無し | bytes(range GET) | 別 task |
-  | `seek-zst` | 接尾辞 `.seek.zst` | bytes | bytes(展開後) | `seekzstdsep-scan/` |
-  | `csv` / `ndjson` | 接尾辞 | bytes | frame | plugin |
-  | `parquet` / `ipc` | 接尾辞 | bytes | frame | plugin |
-  | `logfmt` | 接尾辞 `.logfmt` | bytes | frame | polars-logfmt `logfmt-scan/` |
+  | `seek-zst` | 接尾辞 `.seek.zst` | bytes | records(展開後) | `seekzstdsep-scan/` |
+  | `csv` / `ndjson` | 接尾辞 | bytes / records | frame | plugin |
+  | `parquet` / `ipc` | 接尾辞 | bytes / records(つないで bytes に) | frame | plugin |
+  | `logfmt` | 接尾辞 `.logfmt` | bytes | frame | polars-logfmt `logfmt-scan/`(`Records` は受けない) |
 
 - built-in の読み方。polars の path scan は使わない(`ReadAt` の先が file とは限らない)。
   - **parquet / ipc** は bytes を全部読んで `ScanSources::Buffers` で polars 自身の lazy scan に渡す。
@@ -147,6 +190,13 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
   - **csv / ndjson** は plugin の chunk 層(`scan::chunked`)で読む。バイト列を改行で chunk に切り、
     chunk ごとに polars の reader を `Cursor` に当てて並列に読み、連結する。chunk の幅は形式の
     `chunk_size` オプション(polars の「並列に読む単位」と同じ意味。デフォルトは polars の値)。
+    切れ目は `polars_dyn open` の時点では探さず、collect の時点で先頭から探す(`n_rows` があれば
+    足りたところで止め、その先は探さない)。`open` の時点で読むのは schema を決める chunk 0 だけ。
+    `Records` を受けたときは切れ目を探さない: 単位の塊をそのまま 1 chunk にする(`chunk_size` は
+    使わない)。スレッドの数ずつ単位を頼んで並列にパースし、`n_rows` があれば番号順の行数の累計が
+    足りたところで止める。単位の数が分かれば `count_units_for` で頼む範囲を先に絞る。
+    レコードは改行で終わる前提で、区切りが改行でない finder の `seek-zst` の後ろに置くと
+    parse error になる(`seek-zst` は形式を知らないので止めない。文書に書く)。
     切れ目は任意の改行で、csv の引用符の中の改行も切れ目になりうる(そこで切れると parse error。
     polars の path scan は引用を見て行頭を探していた。差として文書に書き、引用内改行のある csv は
     `chunk_size` をファイル長以上にして 1 chunk で読む)。schema は chunk 0 から決める。chunk ごとに reader を作るので、ファイル全体を主語にする
@@ -161,7 +211,7 @@ source 文字列から **scan の列(chain)** を組み、scan どうしを `Rea
     `sort` + `slice` の動的 top-k は当てずに素通しする(答えの一部ではない)。
 - 採らなかった案: source ごとの named flag(`open` の分岐を作り直すことになる)、
   `inventory` crate による自動収集(構築時に渡す配列で足りる)、一覧コマンド
-  (エラーメッセージの列挙で足りる)、`ReadAt` に `path()` / `chunks()` を持たせる
+  (エラーメッセージの列挙で足りる)、`ReadAt` に `path()` を持たせる
   (連結情報の混入。plugin が「file なら polars の path scan」と分岐することになる)、
   scan の間を `Read + Seek` や `LazyFrame` で繋ぐ(前者は `&self` で並列に読めず、後者は frame の
   上に別の frame 層を重ねられない)、層の種類ごとに trait を分ける(plugin が種類の順序を知ることに
@@ -337,8 +387,8 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
 
 polars は csv / ndjson の圧縮ファイルを全体展開してからしか読めない(seek 不可、展開は単一
 スレッド、slice の pushdown は展開後)。fork の registry でこれを埋める。seekable zstd を
-**展開後のバイト列の `ReadAt`** にする `wrap` の scan を 1 つ作り、パーサは chain の次の scan
-(built-in の csv / ndjson、logfmt-scan)に任せる。
+**展開後のレコード列(`Records`)** にする `wrap` の scan を 1 つ作り、パーサは chain の次の scan
+(built-in の csv / ndjson)に任せる。
 
 **この層は plugin 本体ではなく `seekzstdsep-scan` crate に置く**(`nu-polars-dyn-build` で組み込む)。
 plugin が publish するバイナリは polars 自身が読む 4 形式と `file` だけを持ち、zstd に依存しない。
@@ -349,25 +399,40 @@ registry の設計とそのまま噛み合う(`events.jsonl.seek.zst` → `file`
 素の `.zst`(seek 不可、polars が全体展開)は登録しない。`polars_dyn open x.csv.zst` は
 登録名の列挙エラーになる。
 
-1. **`seek-zst` は `ReadAt` を受けて `ReadAt` を返す。** 展開後 offset → frame は seek table で引ける。
-   実装は zeekstd の `Decoder`(`Read + Seek` の source の上で、展開後 offset に `set_offset` して
-   読む。frame の途中の offset は frame 先頭から読み捨てる)。`Decoder` は thread 間で共有できないので
-   `Mutex<Vec<Decoder>>` のプールから取って返す。`len` は seek table の `size_decomp`。
-   下の compressed source は plugin から渡された `ReadAt` を `ReadAtCursor` で `Read + Seek` にして
-   渡す(decoder ごとに cursor 1 つ、handle は `Arc` で共有)。`zeekstd` は crates.io から exact
-   semver で依存する。`--opts` は取らない(空でない record はエラー)。
-2. **パーサは持たない。** csv / ndjson は plugin の chunk 層が読む(「`polars_dyn open` と registry」の
-   節)。chunk は展開後のバイト列を改行で切るので frame 境界とは無関係で、chunk の読みは frame を
-   跨いで展開する。逆に、レコード番号から frame を引く必要が無いので、frame ごとのレコード数の
-   不変条件も、それを検査する `verify_frames` も要らない(016 まではあった。展開後の offset で
-   読む限り、数が揃っていなくても答えは変わらない)。
-3. `.logfmt.seek.zst` も同じ層で、`file`, `seek-zst`, `logfmt` の chain になる。logfmt-scan は
-   `.seek.zst` を自前で持たない。
+1. **`seek-zst` は `ReadAt` を受けて `Records` を返す。** 実装は seekzstdsep の `RecordReader`
+   (frame = レコード境界で読む)。`wrap` の時点では `RecordReader::from_reader` で開いて
+   (seek table と frame 0 のレコード数を読む)、開けることだけ確かめる。単位は frame で、
+   `read_unit(k)` は `RecordReader::fold_records(k * records_per_frame, records_per_frame, ..)` で
+   frame 1 つ分のレコードを読み込み窓から借りたまま受け、`record_filter` を通ったものだけを `dst` に
+   コピーする(落とすレコードはコピーしない)。最後の frame だけはファイルの終わりまで読む: 区切りで
+   終わらない最後のレコードは、最後の frame が満杯のとき frame の格子の外の番号に置かれるため。
+   開いた `RecordReader` はプールに戻して使い回す。頼まれない frame は展開せず、下の `ReadAt` にも
+   頼まれた frame の範囲しか読みに行かない。`count_units` は frame の数、`count_units_for(n)` は `record_filter` が無ければ `n` 件を含む frame の数、あれば None。
+   `Records` を受けたときはエラー(seek table を読むには offset 指定の読みが要る)。
+   seekzstdsep は crates.io から exact semver で依存する。
+2. **`--opts`**(`--opts {seek-zst: {...}}`、知らないキーはエラー):
+   - `finder` / `finder_arg`: レコードの境界。seekzstdsep の CLI の `--finder` / `--finder-arg` と
+     同じ名前と値で、`seekzstdsep::find::from_spec` にそのまま渡す(`sep` / `fixed` /
+     `flatbuffers` / `msgpack`)。デフォルトは `sep` と `"\n"`。境界の判定は seekzstdsep の finder の
+     1 か所だけで、この crate も後ろの層も探し直さない。
+   - `verify_frames`(デフォルト true): frame ごとのレコード数の不変条件を検査する
+     (`RecordReader::verifying` の読み)。false で外す。外すと、frame ごとのレコード数が揃っていない
+     ファイルは frame の位置を誤って読む(frame を `k * records_per_frame` で引くため)。
+   - `record_filter`: パースの前にレコードを部分一致(`memchr::memmem::Finder`)で絞る。
+     logfmt の `line_filter` と同じ役で、単位が行ではなく finder が切るレコードなのでこの名前。
+     `n_rows` は絞った後のレコードを数える(logfmt と同じ)。csv の見出し行も絞られうる。
+3. **パーサは持たない。** csv / ndjson は plugin の chunk 層がレコードを chunk にまとめて読む
+   (「`polars_dyn open` と registry」の節)。
+4. **frame は並列に展開する。** chunk 層がスレッドごとに別の frame を頼み、展開とパースを同じ
+   スレッドで続けて行う。
+5. `.logfmt.seek.zst` も同じ層で、`file`, `seek-zst`, `logfmt` の chain になる。logfmt-scan は
+   `.seek.zst` を自前で持たない。ただし logfmt-scan は `Bytes::At` だけを今までどおり読み、
+   `Records` はエラーにする(kazu 判断)。polars-logfmt の frame 並列の読みは offset で読める
+   source を前提にしていて、塊を読ませる形は別に設計が要るため。そのため `.logfmt.seek.zst` は
+   読めない。API が変わるので plugin は 0.4.0 に上げ、logfmt-scan は `0.4` に依存する。
 
 採らなかった案: 汎用の frame 層を `seekzstdsep` の隣の crate として publish し、logfmt と
 fork の両方から使う。chain にすれば frame 層は 1 つの `wrap` で、パーサ側は圧縮を知らずに済む。
-seekzstdsep の `RecordReader`(レコード番号で読む)を残す案は、chunk 層が offset で読む今は
-使い手が無い。
 
 **非圧縮ファイルも同じ chunk 層で読む。** 016 までは素の `.csv` / `.ndjson` を polars の path scan に
 任せていたが、chain の末尾は bytes が file か ssh か zst 展開後かを知らないので、path scan は

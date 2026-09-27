@@ -3,11 +3,9 @@
 //! It exists so the `nu-polars-dyn-build` integration test has a crate to compile in that is
 //! not the plugin itself. `--opts` takes `{skip: <n>}` to drop leading lines.
 
-use std::sync::Arc;
-
-use nu_plugin_polars::scan::{ReadAt, ScanSource, parse_opts};
+use nu_plugin_polars::scan::{Bytes, ReadAt, ScanSource, parse_opts};
 use polars::prelude::{
-    Column, DataFrame, IntoLazy, LazyFrame, PlSmallStr, PolarsError, PolarsResult,
+    Column, DataFrame, IntoLazy, LazyFrame, PlSmallStr, PolarsError, PolarsResult, polars_bail,
 };
 use serde::Deserialize;
 
@@ -33,7 +31,10 @@ impl ScanSource for Rows {
         &[".rows"]
     }
 
-    fn scan(&self, source: Arc<dyn ReadAt>, opts: &[u8]) -> PolarsResult<LazyFrame> {
+    fn scan(&self, source: Bytes, opts: &[u8]) -> PolarsResult<LazyFrame> {
+        let Bytes::At(source) = source else {
+            polars_bail!(ComputeError: "`rows` reads bytes by offset, not records")
+        };
         let opts: RowsOpts = serde_json::from_value(serde_json::Value::Object(parse_opts(opts)?))
             .map_err(|e| PolarsError::ComputeError(format!("opts: {e}").into()))?;
         let text = read_to_string(&*source)
