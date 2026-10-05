@@ -23,7 +23,7 @@ jobs:
           components: rustfmt, clippy
       - uses: hustcer/setup-nu@v3
         with:
-          version: "0.116.0"
+          version: "0.116.1"
       - name: fmt
         run: cargo fmt --all -- --check
       - name: check
