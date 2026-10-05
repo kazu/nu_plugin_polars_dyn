@@ -3821,7 +3821,7 @@ dependencies = [
 
 [[package]]
 name = "nu_plugin_polars_dyn"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "chrono",
  "chrono-tz",
