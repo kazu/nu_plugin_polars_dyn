@@ -328,8 +328,8 @@ polars_dyn call <lib: path> <symbol: string> ...<args: expr>
   なく **`PolarsPlugin` 構築時に bin が渡す**形にして、published バイナリは built-in だけを、
   `nu-polars-dyn-build` が生成するバイナリは built-in + 利用者の crate を渡す。
   生成 project は published manifest ではないので path / git 依存を置ける。
-- `workspace = true` は nushell 0.116.0 の root の実値で置き換える。nu 系は crates.io の
-  `=0.116.0`(`nu-protocol` / `nu-plugin` / `nu-path`、dev の `nu-cmd-lang` /
+- `workspace = true` は nushell 0.116.1 の root の実値で置き換える。nu 系は crates.io の
+  `=0.116.1`(`nu-protocol` / `nu-plugin` / `nu-path`、dev の `nu-cmd-lang` /
   `nu-engine` / `nu-parser` / `nu-command` / `nu-plugin-test-support`)。feature は本家の
   指定どおりで、nu 系は `default-features = false`(`nu-plugin` は `local-socket`、dev 側は `plugin`)。
   dev の `nu-plugin-test-support` だけは `local-socket` を足す。本家は同じ workspace の nushell 本体が

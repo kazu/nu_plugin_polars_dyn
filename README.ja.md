@@ -11,7 +11,7 @@ nushell の [`nu_plugin_polars`][upstream] の fork です。パイプを流れ�
 
 | nushell | polars |
 | --- | --- |
-| 0.116.0 | 0.55.2 |
+| 0.116.1 | 0.55.2 |
 
 ## 目次
 
